@@ -26,6 +26,9 @@ class NusaChatBubble extends StatelessWidget {
   /// Tapping a failed bubble retries it.
   final VoidCallback? onTap;
 
+  /// Opens the message actions (copy).
+  final VoidCallback? onLongPress;
+
   const NusaChatBubble({
     super.key,
     required this.text,
@@ -34,6 +37,7 @@ class NusaChatBubble extends StatelessWidget {
     this.isMine = false,
     this.status,
     this.onTap,
+    this.onLongPress,
   });
 
   @override
@@ -129,7 +133,9 @@ class NusaChatBubble extends StatelessWidget {
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: onTap == null ? bubble : GestureDetector(onTap: onTap, child: bubble),
+      child: onTap == null && onLongPress == null
+          ? bubble
+          : GestureDetector(onTap: onTap, onLongPress: onLongPress, child: bubble),
     );
   }
 }

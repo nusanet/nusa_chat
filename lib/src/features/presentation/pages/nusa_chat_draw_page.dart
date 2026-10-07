@@ -165,9 +165,7 @@ class _NusaChatDrawPageState extends State<NusaChatDrawPage> {
   }
 
   void _fail() {
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(widget.strings.editFailed), behavior: SnackBarBehavior.floating));
+    showNusaChatSnackBar(context, widget.strings.editFailed);
   }
 
   @override

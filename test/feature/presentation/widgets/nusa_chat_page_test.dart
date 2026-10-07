@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nusa_chat/nusa_chat.dart';
@@ -111,6 +112,60 @@ void main() {
 
     expect(find.text('Kapan selesai?'), findsOneWidget);
     verify(mockRepository.sendText(tSession, 'Kapan selesai?'));
+  });
+
+  testWidgets('pastikan initialMessage mengisi composer tanpa terkirim otomatis', (tester) async {
+    await pump(tester, NusaChatPage(config: tConfig, bloc: buildBloc(), initialMessage: 'Tanya paket'));
+
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, 'Tanya paket');
+    verifyNever(mockRepository.sendText(any, any));
+
+    await tester.tap(find.byType(NusaChatSendButton));
+    await tester.pump();
+    verify(mockRepository.sendText(tSession, 'Tanya paket')).called(1);
+  });
+
+  testWidgets('pastikan tahan bubble menampilkan opsi salin lalu menyalin teksnya', (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await pump(tester, NusaChatPage(config: tConfig, bloc: buildBloc()));
+
+    await tester.longPress(find.text('Terima kasih informasinya.'));
+    await tester.pumpAndSettle();
+    expect(find.text('Salin'), findsOneWidget);
+
+    await tester.tap(find.text('Salin'));
+    await tester.pumpAndSettle();
+    expect(copied, 'Terima kasih informasinya.');
+    expect(find.text('Salin'), findsNothing);
+    expect(find.text('Pesan disalin'), findsOneWidget);
+  });
+
+  testWidgets('pastikan snackbar mengikuti tema', (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (_) async => null);
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    final theme = NusaChatTheme.fallback().copyWith(
+      snackBarColor: const Color(0xFF00AA00),
+      snackBarTextStyle: const TextStyle(color: Color(0xFF111111), fontSize: 15),
+      snackBarBehavior: SnackBarBehavior.fixed,
+      snackBarRadius: 0,
+    );
+    await pump(tester, NusaChatPage(config: tConfig, bloc: buildBloc(), theme: theme));
+
+    await tester.longPress(find.text('Terima kasih informasinya.'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Salin'));
+    await tester.pumpAndSettle();
+
+    final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    expect(snackBar.backgroundColor, const Color(0xFF00AA00));
+    expect(snackBar.behavior, SnackBarBehavior.fixed);
+    expect((snackBar.shape! as RoundedRectangleBorder).borderRadius, BorderRadius.zero);
+    expect(tester.widget<Text>(find.text('Pesan disalin')).style!.fontSize, 15);
   });
 
   testWidgets('pastikan input lepas fokus saat tap di luar, tetap fokus saat tap kirim', (tester) async {

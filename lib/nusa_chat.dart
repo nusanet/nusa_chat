@@ -27,6 +27,7 @@ export 'src/features/presentation/widgets/widget_chat_input_bar.dart';
 export 'src/features/presentation/widgets/widget_chat_location_sheet.dart';
 export 'src/features/presentation/widgets/widget_chat_media.dart';
 export 'src/features/presentation/widgets/widget_chat_message.dart';
+export 'src/features/presentation/widgets/widget_chat_message_actions.dart';
 export 'src/features/presentation/widgets/widget_chat_send_button.dart';
 export 'src/features/presentation/widgets/widget_chat_status_view.dart';
 export 'src/features/presentation/widgets/widget_svg_icon.dart';

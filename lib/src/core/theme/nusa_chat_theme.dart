@@ -1,5 +1,6 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:nusa_chat/src/core/util/styles/colors.dart';
+import 'package:nusa_chat/src/core/util/styles/spacing.dart';
 import 'package:nusa_chat/src/core/util/styles/typography.dart';
 
 /// Every colour and text style of the chat screen. [NusaChatTheme.fallback]
@@ -108,6 +109,19 @@ class NusaChatTheme {
   final TextStyle statusTextStyle;
   final Color primaryColor;
 
+  // ---- snackbar ----
+  /// Notices such as "Pesan disalin" or a rate limit (see `NusaChatPage.onNotice`
+  /// to replace the snackbar entirely).
+  final Color snackBarColor;
+  final TextStyle snackBarTextStyle;
+  final SnackBarBehavior snackBarBehavior;
+  final double snackBarRadius;
+  final Duration snackBarDuration;
+
+  /// Space around a [SnackBarBehavior.floating] snackbar; Flutter's default
+  /// when null. Ignored for [SnackBarBehavior.fixed].
+  final EdgeInsetsGeometry? snackBarMargin;
+
   const NusaChatTheme({
     required this.backgroundColor,
     required this.appBarColor,
@@ -157,6 +171,12 @@ class NusaChatTheme {
     required this.emojiTabActiveColor,
     required this.emojiSectionStyle,
     required this.emojiStyle,
+    required this.snackBarColor,
+    required this.snackBarTextStyle,
+    required this.snackBarBehavior,
+    required this.snackBarRadius,
+    required this.snackBarDuration,
+    this.snackBarMargin,
   });
 
   /// The default look.
@@ -226,6 +246,23 @@ class NusaChatTheme {
       emojiTabActiveColor: BaseColor.textPrimary,
       emojiSectionStyle: BaseTypography.p4Medium.withColor(BaseColor.textMuted),
       emojiStyle: const TextStyle(fontSize: 26, height: 32 / 26),
+      snackBarColor: BasePalette.neutral900,
+      snackBarTextStyle: BaseTypography.p3Regular.withColor(BaseColor.textInverse),
+      snackBarBehavior: SnackBarBehavior.floating,
+      snackBarRadius: BaseRadius.md,
+      snackBarDuration: const Duration(seconds: 3),
+    );
+  }
+
+  /// A snackbar showing [message] in this theme.
+  SnackBar snackBar(String message) {
+    return SnackBar(
+      content: Text(message, style: snackBarTextStyle),
+      backgroundColor: snackBarColor,
+      behavior: snackBarBehavior,
+      margin: snackBarBehavior == SnackBarBehavior.floating ? snackBarMargin : null,
+      duration: snackBarDuration,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(snackBarRadius)),
     );
   }
 
@@ -278,6 +315,12 @@ class NusaChatTheme {
     Color? emojiTabActiveColor,
     TextStyle? emojiSectionStyle,
     TextStyle? emojiStyle,
+    Color? snackBarColor,
+    TextStyle? snackBarTextStyle,
+    SnackBarBehavior? snackBarBehavior,
+    double? snackBarRadius,
+    Duration? snackBarDuration,
+    EdgeInsetsGeometry? snackBarMargin,
   }) {
     return NusaChatTheme(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -328,6 +371,12 @@ class NusaChatTheme {
       emojiTabActiveColor: emojiTabActiveColor ?? this.emojiTabActiveColor,
       emojiSectionStyle: emojiSectionStyle ?? this.emojiSectionStyle,
       emojiStyle: emojiStyle ?? this.emojiStyle,
+      snackBarColor: snackBarColor ?? this.snackBarColor,
+      snackBarTextStyle: snackBarTextStyle ?? this.snackBarTextStyle,
+      snackBarBehavior: snackBarBehavior ?? this.snackBarBehavior,
+      snackBarRadius: snackBarRadius ?? this.snackBarRadius,
+      snackBarDuration: snackBarDuration ?? this.snackBarDuration,
+      snackBarMargin: snackBarMargin ?? this.snackBarMargin,
     );
   }
 }
@@ -348,4 +397,13 @@ class NusaChatThemeScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(NusaChatThemeScope oldWidget) => theme != oldWidget.theme;
+}
+
+/// Shows [message] in the snackbar of [theme] — the current chat's
+/// [NusaChatTheme] by default — replacing one already showing.
+void showNusaChatSnackBar(BuildContext context, String message, {NusaChatTheme? theme}) {
+  final snackBar = (theme ?? NusaChatThemeScope.of(context)).snackBar(message);
+  ScaffoldMessenger.maybeOf(context)
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(snackBar);
 }

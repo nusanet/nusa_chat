@@ -113,9 +113,7 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
 
   void _close(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
+    showNusaChatSnackBar(context, message);
     Navigator.of(context).pop();
   }
 
@@ -164,9 +162,7 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
     } on CameraException {
       if (!mounted) return;
       setState(() => _isTakingPicture = false);
-      ScaffoldMessenger.maybeOf(
-        context,
-      )?.showSnackBar(SnackBar(content: Text(widget.strings.cameraUnavailable), behavior: SnackBarBehavior.floating));
+      showNusaChatSnackBar(context, widget.strings.cameraUnavailable);
     }
   }
 

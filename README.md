@@ -10,6 +10,7 @@ Bridge over REST and WebSocket.
   (pencil, text, arrow) before sending.
 - Documents (PDF, Word, Excel), current location and voice notes.
 - Emoji panel with categories, search (Indonesian and English) and recently used emoji.
+- Long-press a message to copy its text.
 - Day dividers and a floating date while scrolling; full-screen photo viewer with pinch and double-tap zoom.
 - Restyle with `NusaChatTheme` / `NusaChatStrings`, or replace parts with builders.
 
@@ -33,6 +34,15 @@ NusaChat.open(
 
 Without `visitorId` the server generates one and the plugin remembers it on the device, so the same visitor
 resumes the same conversation.
+
+### Opening with a message
+
+```dart
+NusaChatPage(
+  config: config,
+  initialMessage: 'Saya mau tanya soal pesanan #INV-123', // prefilled in the composer, not sent
+)
+```
 
 ### Platform setup
 
@@ -69,12 +79,13 @@ session call returns `403` and the socket is closed with `1008`. No other backen
 | Back button | `leading:` (replace) or `onBack:` (behaviour) |
 | Whole app bar | `appBarBuilder: (context, data) => AppBar(...)` — `data` has title, connection, onBack |
 | Message row | `messageBuilder: (context, data, defaultWidget) => …` |
-| Bubble only | `bubbleBuilder: (context, data) => …` |
+| Bubble only | `bubbleBuilder: (context, data) => …` (wire `data.onLongPress` to keep copy) |
 | Agent avatar | `agentAvatarBuilder: (context) => NusaChatAvatar(child: Image.asset(...))` |
 | Composer | `inputBarBuilder: (context, composer) => …` (`controller`, `focusNode`, `send`, `canSend`) |
 | Send button | `sendButtonBuilder: (context, onSend) => …` (`onSend` is null when empty) |
 | Loading / error / empty / connection banner | `loadingBuilder`, `errorBuilder`, `emptyBuilder`, `connectionBuilder` |
-| Notices (e.g. rate limited) | `onNotice: (context, message) => …` (SnackBar by default) |
+| Snackbar look | `theme: NusaChatTheme.fallback().copyWith(snackBarColor: …, snackBarTextStyle: …, snackBarBehavior: …, snackBarRadius: …, snackBarDuration: …, snackBarMargin: …)` |
+| Notices (e.g. rate limited, "Pesan disalin") | `onNotice: (context, message) => …` replaces the snackbar entirely |
 
 Every default widget (`NusaChatAppBar`, `NusaChatBubble`, `NusaChatMessageRow`, `NusaChatAvatar`,
 `NusaChatInputBar`, `NusaChatSendButton`, `NusaChatIconButton`) is exported, so custom builders can reuse them.

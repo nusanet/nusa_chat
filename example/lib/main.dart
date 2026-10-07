@@ -78,6 +78,15 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: const Text('Tanya soal pesanan'),
+            onPressed: () => NusaChat.open(
+              context,
+              page: NusaChatPage(config: _config, initialMessage: 'Halo, saya mau tanya soal pesanan #INV-123'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
             icon: const Icon(Icons.palette_outlined),
             label: const Text('Buka NusaChat (kustom)'),
             onPressed: () => NusaChat.open(context, page: _customized(context)),

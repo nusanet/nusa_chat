@@ -1,6 +1,6 @@
 name: nusa_chat
 description: "In-app customer chat for Flutter (Android, iOS) over NusaContact Socket Bridge: text, photos with crop and drawing, documents, location, voice notes and emoji."
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/nusanet/nusa_chat
 issue_tracker: https://github.com/nusanet/nusa_chat/issues
 topics:

@@ -23,6 +23,7 @@ class BaseIcons {
   static const microphone = '$_path/microphone.svg';
   static const trash = '$_path/trash.svg';
   static const close = '$_path/x.svg';
+  static const copy = '$_path/copy.svg';
   static const download = '$_path/download.svg';
   static const externalLink = '$_path/external-link.svg';
   static const bolt = '$_path/bolt.svg';

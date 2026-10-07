@@ -29,6 +29,7 @@ import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_input_ba
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_location_sheet.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_media.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_message.dart';
+import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_message_actions.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_status_view.dart';
 import 'package:nusa_chat/src/injection_container.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -112,12 +113,16 @@ class NusaChatMessageData {
   /// Resends a failed message; null otherwise.
   final VoidCallback? onRetry;
 
+  /// Shows the message actions (copy); null when there is no text to copy.
+  final VoidCallback? onLongPress;
+
   const NusaChatMessageData({
     required this.message,
     required this.displayText,
     required this.time,
     required this.showSender,
     this.onRetry,
+    this.onLongPress,
   });
 }
 
@@ -192,6 +197,12 @@ class NusaChatPage extends StatefulWidget {
   /// Called for one-off notices (e.g. rate limited). A [SnackBar] by default.
   final void Function(BuildContext context, String message)? onNotice;
 
+  // ---- initial message ----
+
+  /// Prefills the composer, e.g. with the product or order the chat was
+  /// opened from; the visitor can edit it and sends it themselves.
+  final String? initialMessage;
+
   /// For tests: drive the page with this bloc instead of building one from [config].
   @visibleForTesting
   final ChatBloc? bloc;
@@ -221,6 +232,7 @@ class NusaChatPage extends StatefulWidget {
     this.emoji = true,
     this.emojiStore,
     this.onNotice,
+    this.initialMessage,
     this.bloc,
   });
 
@@ -231,7 +243,7 @@ class NusaChatPage extends StatefulWidget {
 class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   NusaChatInjector? _injector;
   late final ChatBloc _bloc;
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(text: widget.initialMessage);
   final _focusNode = FocusNode();
   final _composerKey = GlobalKey();
 
@@ -704,9 +716,8 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
       onNotice(context, message);
       return;
     }
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
+    // [context] is above this page's NusaChatThemeScope.
+    showNusaChatSnackBar(context, message, theme: _theme);
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, ChatConnectionStatus connection) {
@@ -883,6 +894,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
       time: DateHelper.formatTime(message.createdAt),
       showSender: showSender,
       onRetry: failed ? () => _bloc.add(ChatMessageRetried(localId: message.localId)) : null,
+      onLongPress: _copyableText(message) == null ? null : () => _showMessageActions(message),
     );
 
     final media = _buildMediaContent(message, interactive: !failed);
@@ -895,6 +907,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
           isMine: message.isMine,
           status: message.isMine ? message.status : null,
           onTap: data.onRetry,
+          onLongPress: data.onLongPress,
         );
     final row = NusaChatMessageRow(
       bubble: bubble,
@@ -905,6 +918,26 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
       errorText: failed ? widget.strings.failedToSend : null,
     );
     return widget.messageBuilder?.call(context, data, row) ?? row;
+  }
+
+  /// The text a long press copies: the message or a media caption.
+  static String? _copyableText(ChatMessage message) {
+    if (message.type == ChatMessageType.unknown || message.type == ChatMessageType.location) return null;
+    return message.text.trim().isEmpty ? null : message.text;
+  }
+
+  Future<void> _showMessageActions(ChatMessage message) async {
+    final text = _copyableText(message);
+    if (text == null) return;
+    HapticFeedback.selectionClick();
+    final action = await showNusaChatMessageActions(context, strings: widget.strings);
+    switch (action) {
+      case NusaChatMessageAction.copy:
+        await Clipboard.setData(ClipboardData(text: text));
+        _notice(widget.strings.copied);
+      case null:
+        break;
+    }
   }
 
   /// The media part of a bubble, or null for a text message. Taps are off

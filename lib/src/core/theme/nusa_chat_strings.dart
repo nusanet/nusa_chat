@@ -28,6 +28,12 @@ class NusaChatStrings {
   final List<String> months;
   final String failedToSend;
 
+  /// Long-press actions on a message.
+  final String copy;
+
+  /// Shown after a message is copied.
+  final String copied;
+
   /// Labels for media messages, used where only text fits (e.g. a custom
   /// bubble built from `NusaChatMessageData.displayText`).
   final String imageLabel;
@@ -153,6 +159,8 @@ class NusaChatStrings {
     this.weekdays = const ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
     this.months = const ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
     this.failedToSend = 'Gagal terkirim. Ketuk untuk kirim ulang.',
+    this.copy = 'Salin',
+    this.copied = 'Pesan disalin',
     this.imageLabel = '[Gambar]',
     this.documentLabel = '[Dokumen]',
     this.audioLabel = '[Pesan suara]',
@@ -269,6 +277,8 @@ class NusaChatStrings {
     List<String>? weekdays,
     List<String>? months,
     String? failedToSend,
+    String? copy,
+    String? copied,
     String? imageLabel,
     String? documentLabel,
     String? audioLabel,
@@ -336,6 +346,8 @@ class NusaChatStrings {
       weekdays: weekdays ?? this.weekdays,
       months: months ?? this.months,
       failedToSend: failedToSend ?? this.failedToSend,
+      copy: copy ?? this.copy,
+      copied: copied ?? this.copied,
       imageLabel: imageLabel ?? this.imageLabel,
       documentLabel: documentLabel ?? this.documentLabel,
       audioLabel: audioLabel ?? this.audioLabel,
