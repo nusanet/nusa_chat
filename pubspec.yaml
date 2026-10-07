@@ -1,0 +1,100 @@
+name: nusa_chat
+description: "In-app customer chat for Flutter (Android, iOS) over NusaContact Socket Bridge: text, photos with crop and drawing, documents, location, voice notes and emoji."
+version: 0.1.0
+repository: https://github.com/nusanet/nusa_chat
+issue_tracker: https://github.com/nusanet/nusa_chat/issues
+topics:
+  - chat
+  - customer-support
+  - websocket
+  - messaging
+
+environment:
+  sdk: ^3.8.1
+  flutter: ">=3.32.0"
+
+# Mobile only — the WebSocket client is dart:io (IOWebSocketChannel) so it can send the Origin header.
+platforms:
+  android:
+  ios:
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Pure Dart image codecs, used to save a cropped or edited photo as JPEG.
+  image: ^4.10.1
+
+  # Flutter plugin for discovering the state of the network (WiFi & mobile/cellular) connectivity on Android and iOS.
+  connectivity_plus: ^7.0.0
+
+  # Functional Programming in Dart. Used for Either<Failure, T> on the repository/use case boundary.
+  dartz: ^0.10.1
+
+  # A powerful HTTP networking package, used for the widget REST endpoints (session, history, fallback send).
+  dio: ^5.9.0
+
+  # An abstract class that helps to implement equality without needing to explicitly override == and hashCode.
+  equatable: ^2.0.7
+
+  # Flutter widgets that make it easy to implement the BLoC (Business Logic Component) design pattern.
+  flutter_bloc: ^9.1.1
+
+  # An SVG rendering and widget library for Flutter, used for the bundled Tabler icons.
+  flutter_svg: ^2.2.1
+
+  # Simple direct Service Locator. The plugin keeps its own instance so it never clashes with the host app's GetIt.
+  get_it: ^9.2.0
+
+  # Classes and helper functions that support JSON code generation via the `json_serializable` package.
+  json_annotation: ^4.9.0
+
+  # Flutter plugin for reading and writing key-value pairs, used to remember visitor_id/conversation_id.
+  shared_preferences: ^2.5.3
+
+  # StreamChannel wrappers for WebSockets, used for the real-time chat connection (with an explicit Origin header).
+  web_socket_channel: ^3.0.3
+  image_picker: ^1.2.4
+  file_picker: ^11.0.3
+  geolocator: ^14.0.1
+  just_audio: ^0.10.6
+  url_launcher: ^6.3.3
+  path_provider: ^2.1.6
+  record: ^6.1.2
+  camera: ^0.12.0+2
+  image_picker_android: ^0.8.13+17
+  image_picker_platform_interface: ^2.11.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # A testing library which make it easy to test blocs.
+  bloc_test: ^10.0.0
+
+  # Tools to write binaries that run builders.
+  build_runner: ^2.7.1
+
+  # Automatically generate code for converting to and from JSON by annotating Dart classes.
+  json_serializable: ^6.11.2
+
+  # A mock framework inspired by Mockito.
+  mockito: ^5.4.4
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  assets:
+    - assets/icons/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700

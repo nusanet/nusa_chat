@@ -1,0 +1,32 @@
+/// NusaChat — in-app customer chat backed by NusaContact Socket Bridge.
+library;
+
+export 'src/config/nusa_chat_config.dart';
+export 'src/core/service/media_service.dart';
+export 'src/core/theme/nusa_chat_strings.dart';
+export 'src/core/theme/nusa_chat_theme.dart';
+export 'src/core/util/emoji/emoji.dart';
+export 'src/core/util/icons.dart' show BaseIcons;
+export 'src/features/domain/entities/chat_attachment.dart';
+export 'src/features/domain/entities/chat_message.dart';
+export 'src/features/presentation/bloc/chat/chat_state.dart' show ChatConnectionStatus;
+export 'src/core/util/image_edit.dart' show NusaChatMark, NusaChatStrokeMark, NusaChatArrowMark, NusaChatTextMark;
+export 'src/features/presentation/pages/nusa_chat_camera_page.dart';
+export 'src/features/presentation/pages/nusa_chat_crop_page.dart' hide NusaChatCropBox;
+export 'src/features/presentation/pages/nusa_chat_draw_page.dart';
+export 'src/features/presentation/pages/nusa_chat_image_viewer_page.dart';
+export 'src/features/presentation/pages/nusa_chat_media_preview_page.dart';
+export 'src/features/presentation/pages/nusa_chat_page.dart';
+export 'src/features/presentation/widgets/widget_chat_app_bar.dart';
+export 'src/features/presentation/widgets/widget_chat_attachment_menu.dart';
+export 'src/features/presentation/widgets/widget_chat_avatar.dart';
+export 'src/features/presentation/widgets/widget_chat_bubble.dart';
+export 'src/features/presentation/widgets/widget_chat_emoji_panel.dart';
+export 'src/features/presentation/widgets/widget_chat_icon_button.dart';
+export 'src/features/presentation/widgets/widget_chat_input_bar.dart';
+export 'src/features/presentation/widgets/widget_chat_location_sheet.dart';
+export 'src/features/presentation/widgets/widget_chat_media.dart';
+export 'src/features/presentation/widgets/widget_chat_message.dart';
+export 'src/features/presentation/widgets/widget_chat_send_button.dart';
+export 'src/features/presentation/widgets/widget_chat_status_view.dart';
+export 'src/features/presentation/widgets/widget_svg_icon.dart';
