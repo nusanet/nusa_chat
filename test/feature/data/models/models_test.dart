@@ -20,6 +20,13 @@ void main() {
         'display_name': 'Budi',
       });
     });
+
+    test('pastikan fcm_token ikut dikirim kalau ada', () {
+      expect(const SessionBody(visitorId: 'v1', fcmToken: 'fcm-1').toJson(), {
+        'visitor_id': 'v1',
+        'fcm_token': 'fcm-1',
+      });
+    });
   });
 
   group('SessionResponse', () {

@@ -1,3 +1,11 @@
+## 0.3.0
+
+* `NusaChatConfig.fcmToken`: sent as `fcm_token` with every session start. The bridge does not store it yet —
+  push needs the backend to read this field.
+* `NusaChatClient(config).getActiveSession()`: the visitor's open conversation (`ChatSession`) for the host
+  app's own views, without opening the chat screen. Uses `POST .../sessions`, so a new conversation is opened
+  when none is.
+
 ## 0.2.0
 
 * `NusaChatPage.initialMessage`: prefills the composer; the visitor edits and sends it.

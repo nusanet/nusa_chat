@@ -35,6 +35,27 @@ NusaChat.open(
 Without `visitorId` the server generates one and the plugin remembers it on the device, so the same visitor
 resumes the same conversation.
 
+### Push notifications (FCM)
+
+The plugin does not depend on Firebase. Pass the device token and it is sent as `fcm_token` with every session
+start (the bridge has to store it to push agent replies):
+
+```dart
+NusaChatConfig(..., fcmToken: await FirebaseMessaging.instance.getToken())
+```
+
+### Active session in your own views
+
+```dart
+final client = NusaChatClient(config);
+final session = await client.getActiveSession(); // ChatSession: visitorId, conversationId
+await client.dispose();
+```
+
+This is the same `POST /v1/widget/{website_id}/sessions` the chat screen makes, so when no conversation is open
+(e.g. closed after 24h idle) the server opens a new one. Failures throw `NusaChatException` (`message`,
+`statusCode`).
+
 ### Opening with a message
 
 ```dart

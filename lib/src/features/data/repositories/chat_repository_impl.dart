@@ -63,7 +63,12 @@ class ChatRepositoryImpl implements ChatRepository {
   Future<Either<Failure, ChatSession>> _createSession(String? visitorId) async {
     try {
       final response = await remoteDataSource.createSession(
-        SessionBody(pageUrl: config.pageUrl, visitorId: visitorId, displayName: config.displayName),
+        SessionBody(
+          pageUrl: config.pageUrl,
+          visitorId: visitorId,
+          displayName: config.displayName,
+          fcmToken: config.fcmToken,
+        ),
       );
       final session = response.toEntity();
       try {

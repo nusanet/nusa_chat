@@ -14,18 +14,20 @@ class SessionBody extends Equatable {
   final String? visitorId;
   @JsonKey(name: 'display_name')
   final String? displayName;
+  @JsonKey(name: 'fcm_token')
+  final String? fcmToken;
 
-  const SessionBody({this.pageUrl, this.referrer, this.visitorId, this.displayName});
+  const SessionBody({this.pageUrl, this.referrer, this.visitorId, this.displayName, this.fcmToken});
 
   factory SessionBody.fromJson(Map<String, dynamic> json) => _$SessionBodyFromJson(json);
 
   Map<String, dynamic> toJson() => _$SessionBodyToJson(this);
 
   @override
-  List<Object?> get props => [pageUrl, referrer, visitorId, displayName];
+  List<Object?> get props => [pageUrl, referrer, visitorId, displayName, fcmToken];
 
   @override
   String toString() {
-    return 'SessionBody{pageUrl: $pageUrl, referrer: $referrer, visitorId: $visitorId, displayName: $displayName}';
+    return 'SessionBody{pageUrl: $pageUrl, referrer: $referrer, visitorId: $visitorId, displayName: $displayName, fcmToken: $fcmToken}';
   }
 }

@@ -27,6 +27,11 @@ class NusaChatConfig extends Equatable {
   /// Context for the agent, e.g. the screen the chat was opened from.
   final String? pageUrl;
 
+  /// Firebase Cloud Messaging token of this device, sent when the session
+  /// starts so the server can push agent replies while the chat is closed.
+  /// The host app owns Firebase; the plugin only forwards the token.
+  final String? fcmToken;
+
   /// Overrides the WebSocket base derived from [baseUrl] (`http`→`ws`, `https`→`wss`).
   final String? wsBaseUrl;
 
@@ -40,6 +45,7 @@ class NusaChatConfig extends Equatable {
     this.visitorId,
     this.displayName,
     this.pageUrl,
+    this.fcmToken,
     this.wsBaseUrl,
     this.enableLog = false,
   });
@@ -60,10 +66,20 @@ class NusaChatConfig extends Equatable {
   }
 
   @override
-  List<Object?> get props => [baseUrl, websiteId, origin, visitorId, displayName, pageUrl, wsBaseUrl, enableLog];
+  List<Object?> get props => [
+    baseUrl,
+    websiteId,
+    origin,
+    visitorId,
+    displayName,
+    pageUrl,
+    fcmToken,
+    wsBaseUrl,
+    enableLog,
+  ];
 
   @override
   String toString() {
-    return 'NusaChatConfig{baseUrl: $baseUrl, websiteId: $websiteId, origin: $origin, visitorId: $visitorId, displayName: $displayName, pageUrl: $pageUrl, wsBaseUrl: $wsBaseUrl}';
+    return 'NusaChatConfig{baseUrl: $baseUrl, websiteId: $websiteId, origin: $origin, visitorId: $visitorId, displayName: $displayName, pageUrl: $pageUrl, fcmToken: $fcmToken, wsBaseUrl: $wsBaseUrl}';
   }
 }

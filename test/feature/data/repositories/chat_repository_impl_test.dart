@@ -106,6 +106,23 @@ void main() {
       verifyNever(mockLocal.getVisitorId(any));
     });
 
+    test('pastikan fcm_token dari host ikut dikirim', () async {
+      repository = build(
+        const NusaChatConfig(
+          baseUrl: 'https://x',
+          websiteId: 'mynusa',
+          origin: 'o',
+          visitorId: 'v1',
+          fcmToken: 'fcm-1',
+        ),
+      );
+      when(mockRemote.createSession(any)).thenAnswer((_) async => tSessionResponse);
+
+      await repository.startSession();
+
+      verify(mockRemote.createSession(const SessionBody(visitorId: 'v1', fcmToken: 'fcm-1')));
+    });
+
     test('pastikan visitor_id tersimpan yang ditolak (400) diganti baru', () async {
       when(mockLocal.getVisitorId('mynusa')).thenAnswer((_) async => 'bad');
       when(

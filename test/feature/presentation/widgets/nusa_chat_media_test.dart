@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nusa_chat/nusa_chat.dart';
-import 'package:nusa_chat/src/features/domain/entities/chat_session.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/connect_chat_socket/connect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/disconnect_chat_socket/disconnect_chat_socket.dart';
