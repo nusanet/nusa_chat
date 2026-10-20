@@ -114,7 +114,14 @@ void main() {
   });
 
   testWidgets('pastikan initialMessage mengisi composer tanpa terkirim otomatis', (tester) async {
-    await pump(tester, NusaChatPage(config: tConfig, bloc: buildBloc(), initialMessage: 'Tanya paket'));
+    await pump(
+      tester,
+      NusaChatPage(
+        config: tConfig,
+        bloc: buildBloc(),
+        initialMessages: const [NusaChatInitialMessage(text: 'Tanya paket')],
+      ),
+    );
 
     expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, 'Tanya paket');
     verifyNever(mockRepository.sendText(any, any));

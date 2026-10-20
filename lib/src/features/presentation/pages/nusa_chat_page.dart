@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -84,6 +85,17 @@ class NusaChatAttachmentOptions {
     if (document) NusaChatAttachmentKind.document,
     if (location) NusaChatAttachmentKind.location,
   ];
+}
+
+/// What the chat opens with: a text, images, or both — each image is its
+/// own bubble, and the text is the first image's caption.
+class NusaChatInitialMessage {
+  final String text;
+
+  /// Local image files, e.g. product photos.
+  final List<String> imagePaths;
+
+  const NusaChatInitialMessage({this.text = '', this.imagePaths = const []});
 }
 
 /// What a custom app bar gets from the chat page.
@@ -199,9 +211,22 @@ class NusaChatPage extends StatefulWidget {
 
   // ---- initial message ----
 
-  /// Prefills the composer, e.g. with the product or order the chat was
-  /// opened from; the visitor can edit it and sends it themselves.
+  /// Prefills the composer with this text.
+  @Deprecated('Use initialMessages: [NusaChatInitialMessage(text: ...)]')
   final String? initialMessage;
+
+  /// What the chat opens with, e.g. the product or order it was opened from.
+  ///
+  /// With [autoSendInitialMessages] they are sent in order once the chat has
+  /// loaded. Otherwise the texts prefill the composer and the images open in
+  /// the pre-send preview with their captions, for the visitor to send.
+  /// Images the bridge would reject are skipped with a notice; their text is
+  /// still sent (or prefilled).
+  final List<NusaChatInitialMessage> initialMessages;
+
+  /// Sends [initialMessages] once the chat has loaded instead of leaving them
+  /// for the visitor to send.
+  final bool autoSendInitialMessages;
 
   /// For tests: drive the page with this bloc instead of building one from [config].
   @visibleForTesting
@@ -233,6 +258,8 @@ class NusaChatPage extends StatefulWidget {
     this.emojiStore,
     this.onNotice,
     this.initialMessage,
+    this.initialMessages = const [],
+    this.autoSendInitialMessages = false,
     this.bloc,
   });
 
@@ -243,7 +270,23 @@ class NusaChatPage extends StatefulWidget {
 class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   NusaChatInjector? _injector;
   late final ChatBloc _bloc;
-  late final _controller = TextEditingController(text: widget.initialMessage);
+  late final List<NusaChatInitialMessage> _initialMessages = [
+    // ignore: deprecated_member_use_from_same_package
+    if (widget.initialMessage case final text?) NusaChatInitialMessage(text: text),
+    ...widget.initialMessages,
+  ];
+
+  late final _controller = TextEditingController(
+    text: widget.autoSendInitialMessages
+        ? null
+        : _joinTexts([
+            for (final message in _initialMessages)
+              if (message.imagePaths.isEmpty) message.text,
+          ]),
+  );
+
+  /// Waits for the chat to load to hand over the initial messages.
+  StreamSubscription<ChatState>? _initialMessageSubscription;
   final _focusNode = FocusNode();
   final _composerKey = GlobalKey();
 
@@ -301,6 +344,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
       _bloc = _injector!.createChatBloc();
     }
     _bloc.add(const ChatStarted());
+    _awaitInitialMessage();
     _panelReveal = AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
     WidgetsBinding.instance.addObserver(this);
     // Typing again (tapping the field) brings the keyboard back instead of the panel.
@@ -341,6 +385,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _initialMessageSubscription?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     _recordingTimer?.cancel();
@@ -356,6 +401,77 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
       _bloc.close().whenComplete(() => _injector?.dispose());
     }
     super.dispose();
+  }
+
+  /// Hands over the initial messages once, the first time the chat loads
+  /// (also after a failed start is retried): a send before that has no session.
+  void _awaitInitialMessage() {
+    final needed = _initialMessages.any(
+      (message) => message.imagePaths.isNotEmpty || (widget.autoSendInitialMessages && message.text.trim().isNotEmpty),
+    );
+    if (!needed) return;
+    _initialMessageSubscription = _bloc.stream.listen((state) {
+      if (state.status != ChatViewStatus.loaded) return;
+      _initialMessageSubscription?.cancel();
+      _initialMessageSubscription = null;
+      _deliverInitialMessages();
+    });
+  }
+
+  Future<void> _deliverInitialMessages() async {
+    final drafts = <ChatDraft>[];
+    // Texts whose images were all rejected, to send (or prefill) on their own.
+    final orphaned = <String>[];
+    for (final message in _initialMessages) {
+      final text = message.text.trim();
+      final images = [for (final path in message.imagePaths) ?await _initialImage(path)];
+      if (images.isEmpty) {
+        drafts.add(ChatDraft(text: text));
+        if (message.imagePaths.isNotEmpty) orphaned.add(text);
+        continue;
+      }
+      // The caption goes on the first image that made it.
+      for (final (index, image) in images.indexed) {
+        drafts.add(ChatDraft(text: index == 0 ? text : '', attachment: image));
+      }
+    }
+    if (!mounted) return;
+
+    if (widget.autoSendInitialMessages) {
+      _bloc.add(ChatMessagesSubmitted(drafts: drafts));
+      return;
+    }
+    // Text-only messages are in the composer already.
+    final composerText = _joinTexts([_controller.text, ...orphaned]);
+    if (composerText != _controller.text) _controller.text = composerText;
+
+    final images = [
+      for (final draft in drafts)
+        if (draft.attachment case final attachment?) attachment.copyWith(caption: draft.text),
+    ];
+    if (images.isEmpty) return;
+    await _preview(
+      images,
+      onAdd: widget.attachments.gallery
+          ? (remaining) async => await _guard(() => _media.pickImages(limit: remaining)) ?? []
+          : null,
+    );
+  }
+
+  /// Null (with a notice) for a file the bridge would reject.
+  Future<ChatAttachment?> _initialImage(String path) async {
+    try {
+      return await _media.imageFromPath(path);
+    } on NusaChatMediaException catch (error) {
+      _onMediaError(error);
+    } on FileSystemException catch (_) {
+      _notice(widget.strings.fileNotSupported);
+    }
+    return null;
+  }
+
+  static String _joinTexts(List<String> texts) {
+    return texts.map((text) => text.trim()).where((text) => text.isNotEmpty).join('\n');
   }
 
   void _send() {

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:nusa_chat/nusa_chat.dart';
+import 'package:nusa_chat/src/core/error/failure.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/connect_chat_socket/connect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/disconnect_chat_socket/disconnect_chat_socket.dart';
@@ -36,6 +38,9 @@ class FakeRecorder implements NusaChatVoiceRecorder {
 
 class FakeMediaService implements NusaChatMediaService {
   List<ChatAttachment> images = const [];
+
+  /// What [imageFromPath] returns per path: an attachment, or an error to throw.
+  Map<String, Object> fromPath = {};
   final recorder = FakeRecorder();
 
   @override
@@ -45,7 +50,11 @@ class FakeMediaService implements NusaChatMediaService {
   Future<ChatAttachment?> pickDocument() async => null;
 
   @override
-  Future<ChatAttachment> imageFromPath(String path) async => throw UnimplementedError();
+  Future<ChatAttachment> imageFromPath(String path) async {
+    final result = fromPath[path];
+    if (result is ChatAttachment) return result;
+    throw result ?? const FileSystemException('not found');
+  }
 
   @override
   Future<NusaChatPosition> currentPosition() async =>
@@ -99,7 +108,12 @@ void main() {
 
   tearDown(() => socket.close());
 
-  Future<void> pump(WidgetTester tester, {NusaChatAttachmentOptions? attachments}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    NusaChatAttachmentOptions? attachments,
+    List<NusaChatInitialMessage> initialMessages = const [],
+    bool autoSendInitialMessages = false,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: NusaChatPage(
@@ -107,6 +121,8 @@ void main() {
           bloc: buildBloc(),
           mediaService: media,
           attachments: attachments ?? const NusaChatAttachmentOptions(),
+          initialMessages: initialMessages,
+          autoSendInitialMessages: autoSendInitialMessages,
         ),
       ),
     );
@@ -269,5 +285,157 @@ void main() {
     expect(find.text('Tagihan bulan ini'), findsOneWidget);
     expect(find.byType(NusaChatAudioContent), findsOneWidget);
     expect(find.text('0:07'), findsOneWidget);
+  });
+  group('initialMessages', () {
+    const tUploaded = UploadedMedia(mediaId: 'abc', messageType: 'document');
+    String composerText(WidgetTester tester) => tester.widget<TextField>(find.byType(TextField)).controller!.text;
+
+    setUp(() => when(mockRepository.sendText(any, any)).thenAnswer((_) async => const Right(null)));
+
+    testWidgets('pastikan autoSend: beberapa gambar, keterangan di gambar pertama yang lolos, lalu teks', (
+      tester,
+    ) async {
+      const tBack = ChatAttachment(
+        type: ChatMessageType.document,
+        path: '/tmp/belakang.pdf',
+        fileName: 'belakang.pdf',
+        mimeType: 'application/pdf',
+        size: 1024,
+      );
+      final upload = Completer<Either<Failure, UploadedMedia>>();
+      when(mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress'))).thenAnswer((_) => upload.future);
+      media.fromPath = {'/tmp/produk.pdf': tDocument, '/tmp/belakang.pdf': tBack};
+      await pump(
+        tester,
+        initialMessages: const [
+          NusaChatInitialMessage(
+            text: 'Tanya produk ini',
+            // The first is rejected (missing), so the caption moves to the next.
+            imagePaths: ['/tmp/hilang.jpg', '/tmp/produk.pdf', '/tmp/belakang.pdf'],
+          ),
+          NusaChatInitialMessage(text: 'Ada warna lain?'),
+        ],
+        autoSendInitialMessages: true,
+      );
+      await tester.pump();
+
+      expect(composerText(tester), isEmpty);
+      // The rest wait for the upload before them.
+      verifyNever(mockRepository.sendMedia(any, any, caption: anyNamed('caption')));
+      verifyNever(mockRepository.sendText(any, any));
+
+      upload.complete(const Right(tUploaded));
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      verifyInOrder([
+        mockRepository.uploadMedia(tDocument.copyWith(caption: 'Tanya produk ini'), onProgress: anyNamed('onProgress')),
+        mockRepository.sendMedia(tSession, tUploaded, caption: 'Tanya produk ini'),
+        mockRepository.uploadMedia(tBack, onProgress: anyNamed('onProgress')),
+        mockRepository.sendMedia(tSession, tUploaded, caption: ''),
+        mockRepository.sendText(tSession, 'Ada warna lain?'),
+      ]);
+      expect(find.text('Tanya produk ini'), findsOneWidget);
+      expect(find.text('Ada warna lain?'), findsOneWidget);
+    });
+
+    testWidgets('pastikan autoSend teks saja dikirim sekali dan composer kosong', (tester) async {
+      await pump(
+        tester,
+        initialMessages: const [NusaChatInitialMessage(text: '  Tanya paket  ')],
+        autoSendInitialMessages: true,
+      );
+      await tester.pumpAndSettle();
+
+      expect(composerText(tester), isEmpty);
+      verify(mockRepository.sendText(tSession, 'Tanya paket')).called(1);
+    });
+
+    testWidgets('pastikan gambar yang ditolak dilewati dengan notice, teksnya tetap dikirim', (tester) async {
+      media.fromPath = {
+        '/tmp/besar.jpg': const NusaChatMediaException(NusaChatMediaError.tooLarge, maxBytes: 10 * 1024 * 1024),
+      };
+      await pump(
+        tester,
+        initialMessages: const [
+          NusaChatInitialMessage(text: 'Foto ini', imagePaths: ['/tmp/besar.jpg']),
+          NusaChatInitialMessage(imagePaths: ['/tmp/hilang.jpg']),
+        ],
+        autoSendInitialMessages: true,
+      );
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      await tester.pumpAndSettle();
+      verify(mockRepository.sendText(tSession, 'Foto ini')).called(1);
+      verifyNever(mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')));
+    });
+
+    testWidgets('pastikan tanpa autoSend: teks di composer, gambar di pratinjau dengan keterangannya', (tester) async {
+      when(
+        mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')),
+      ).thenAnswer((_) async => const Right(tUploaded));
+      media.fromPath = {'/tmp/produk.pdf': tDocument};
+      await pump(
+        tester,
+        initialMessages: const [
+          NusaChatInitialMessage(text: 'Tanya produk ini', imagePaths: ['/tmp/produk.pdf']),
+          NusaChatInitialMessage(text: 'Ada warna lain?'),
+          NusaChatInitialMessage(text: 'Foto rusak', imagePaths: ['/tmp/hilang.jpg']),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Kirim ke NusaSelecta'), findsOneWidget);
+      verifyNever(mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')));
+
+      // The rejected image's notice covers the send button until it hides.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      // The composer underneath has its own send button.
+      await tester.tap(
+        find.descendant(of: find.byType(NusaChatMediaPreviewPage), matching: find.byType(NusaChatSendButton)),
+      );
+      await tester.pumpAndSettle();
+
+      verify(mockRepository.sendMedia(tSession, tUploaded, caption: 'Tanya produk ini')).called(1);
+      expect(composerText(tester), 'Ada warna lain?\nFoto rusak');
+      verifyNever(mockRepository.sendText(any, any));
+    });
+
+    testWidgets('pastikan initialMessage lama tetap mengisi composer di depan initialMessages', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NusaChatPage(
+            config: tConfig,
+            bloc: buildBloc(),
+            mediaService: media,
+            // ignore: deprecated_member_use_from_same_package
+            initialMessage: 'Halo',
+            initialMessages: const [NusaChatInitialMessage(text: 'Tanya paket')],
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(composerText(tester), 'Halo\nTanya paket');
+      verifyNever(mockRepository.sendText(any, any));
+    });
+
+    testWidgets('pastikan dikirim setelah start yang gagal dicoba lagi', (tester) async {
+      var attempts = 0;
+      when(
+        mockRepository.startSession(),
+      ).thenAnswer((_) async => attempts++ == 0 ? Left(ConnectionFailure()) : const Right(tSession));
+      await pump(tester, initialMessages: const [NusaChatInitialMessage(text: 'Tanya')], autoSendInitialMessages: true);
+      verifyNever(mockRepository.sendText(any, any));
+
+      await tester.tap(find.text('Coba lagi'));
+      // The connecting indicator keeps animating, so no pumpAndSettle.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      verify(mockRepository.sendText(tSession, 'Tanya')).called(1);
+    });
   });
 }

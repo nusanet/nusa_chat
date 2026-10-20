@@ -1,3 +1,11 @@
+## 0.4.0
+
+* `NusaChatPage.initialMessages`: what the chat opens with, as `NusaChatInitialMessage`s — a text, images
+  (local files), or both; each image is its own bubble and the text is the first image's caption.
+* `NusaChatPage.autoSendInitialMessages`: sends them in order once the chat has loaded. Without it the texts
+  prefill the composer and the images open in the pre-send preview.
+* `NusaChatPage.initialMessage` is deprecated; use `initialMessages: [NusaChatInitialMessage(text: ...)]`.
+
 ## 0.3.0
 
 * `NusaChatConfig.fcmToken`: sent as `fcm_token` with every session start. The bridge does not store it yet —

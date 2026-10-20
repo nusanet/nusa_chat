@@ -237,4 +237,67 @@ void main() {
     expect(state.notice?.message, 'File terlalu besar');
     await bloc.close();
   });
+
+  test('pastikan ChatMessagesSubmitted mengirim berurutan: foto + keterangan satu pesan, lalu teks', () async {
+    final upload = Completer<Either<Failure, UploadedMedia>>();
+    when(mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress'))).thenAnswer((_) => upload.future);
+    final bloc = await started();
+
+    bloc.add(
+      ChatMessagesSubmitted(
+        drafts: [
+          ChatDraft(
+            text: ' Tanya produk ',
+            attachment: tPhoto.copyWith(caption: ''),
+          ),
+          const ChatDraft(text: '   '),
+          const ChatDraft(text: 'Ada warna lain?'),
+        ],
+      ),
+    );
+    final uploading = await bloc.stream.firstWhere((s) => s.messages.length == 1);
+    expect(uploading.messages.single.text, 'Tanya produk');
+    await Future<void>.delayed(Duration.zero);
+    verifyNever(mockRepository.sendText(any, any));
+
+    upload.complete(const Right(tUploaded));
+    final state = await bloc.stream.firstWhere((s) => s.messages.length == 2);
+    expect(state.messages.map((m) => m.type), [ChatMessageType.image, ChatMessageType.text]);
+    expect(state.messages.last.text, 'Ada warna lain?');
+    verifyInOrder([
+      mockRepository.sendMedia(tSession, tUploaded, caption: 'Tanya produk'),
+      mockRepository.sendText(tSession, 'Ada warna lain?'),
+    ]);
+    await bloc.close();
+  });
+
+  test('pastikan ChatMessagesSubmitted berhenti setelah bloc ditutup', () async {
+    final upload = Completer<Either<Failure, UploadedMedia>>();
+    when(mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress'))).thenAnswer((_) => upload.future);
+    final bloc = await started();
+
+    bloc.add(
+      const ChatMessagesSubmitted(
+        drafts: [
+          ChatDraft(attachment: tPhoto),
+          ChatDraft(text: 'halo'),
+        ],
+      ),
+    );
+    await bloc.stream.firstWhere((s) => s.messages.length == 1);
+    final closing = bloc.close();
+    upload.complete(const Right(tUploaded));
+    await closing;
+
+    verifyNever(mockRepository.sendText(any, any));
+  });
+
+  test('pastikan ChatDraft dan ChatMessagesSubmitted punya props dan toString', () {
+    const draft = ChatDraft(text: 'a', attachment: tPhoto);
+    expect(draft, const ChatDraft(text: 'a', attachment: tPhoto));
+    expect(draft.toString(), contains('ChatDraft{text: a'));
+    // Not const: identical instances skip props.
+    expect(ChatMessagesSubmitted(drafts: [draft]), ChatMessagesSubmitted(drafts: [draft]));
+    expect(const ChatMessagesSubmitted(drafts: [draft]).toString(), startsWith('ChatMessagesSubmitted{drafts: ['));
+  });
 }

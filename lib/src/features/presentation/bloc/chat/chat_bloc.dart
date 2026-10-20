@@ -48,6 +48,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatStarted>(_onChatStarted);
     on<ChatTextSubmitted>(_onChatTextSubmitted);
     on<ChatAttachmentsSubmitted>(_onChatAttachmentsSubmitted);
+    on<ChatMessagesSubmitted>(_onChatMessagesSubmitted);
     on<ChatLocationSubmitted>(_onChatLocationSubmitted);
     on<ChatNoticeRequested>((event, emit) => _notify(emit, event.message));
     on<ChatMessageRetried>(_onChatMessageRetried);
@@ -263,6 +264,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     for (final attachment in event.attachments) {
       if (isClosed) return;
       await _sendAttachment(attachment, emit);
+    }
+  }
+
+  FutureOr<void> _onChatMessagesSubmitted(ChatMessagesSubmitted event, Emitter<ChatState> emit) async {
+    for (final draft in event.drafts) {
+      if (isClosed) return;
+      final text = draft.text.trim();
+      final attachment = draft.attachment;
+      if (attachment != null) {
+        await _sendAttachment(attachment.copyWith(caption: text), emit);
+      } else if (text.isNotEmpty) {
+        await _send(text, emit);
+      }
     }
   }
 

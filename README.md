@@ -61,9 +61,22 @@ This is the same `POST /v1/widget/{website_id}/sessions` the chat screen makes, 
 ```dart
 NusaChatPage(
   config: config,
-  initialMessage: 'Saya mau tanya soal pesanan #INV-123', // prefilled in the composer, not sent
+  initialMessages: [
+    NusaChatInitialMessage(text: 'Saya mau tanya produk ini', imagePaths: [front.path, back.path]),
+    NusaChatInitialMessage(text: 'Ada warna lain?'),
+  ],
+  autoSendInitialMessages: true,
 )
 ```
+
+Each `NusaChatInitialMessage` is a text, images, or both. Each image is its own bubble and the text is the first
+image's caption, so the example sends three bubbles: front photo with the caption, back photo, then the text.
+`imagePaths` are local files — download product photos first.
+
+With `autoSendInitialMessages` they are sent in order once the chat has loaded. Without it the texts prefill the
+composer and the images open in the pre-send preview with their captions, for the visitor to send. Images the
+bridge would reject (type, size) are skipped with a notice: the caption moves to the next image, or is sent (or
+prefilled) on its own when none is left.
 
 ### Platform setup
 

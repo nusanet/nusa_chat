@@ -82,7 +82,10 @@ class HomePage extends StatelessWidget {
             label: const Text('Tanya soal pesanan'),
             onPressed: () => NusaChat.open(
               context,
-              page: NusaChatPage(config: _config, initialMessage: 'Halo, saya mau tanya soal pesanan #INV-123'),
+              page: NusaChatPage(
+                config: _config,
+                initialMessages: const [NusaChatInitialMessage(text: 'Halo, saya mau tanya soal pesanan #INV-123')],
+              ),
             ),
           ),
           const SizedBox(height: 12),

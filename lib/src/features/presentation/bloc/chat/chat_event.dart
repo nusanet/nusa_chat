@@ -44,6 +44,39 @@ class ChatAttachmentsSubmitted extends ChatEvent {
   }
 }
 
+/// One message of a [ChatMessagesSubmitted]: a text, a file, or a file with
+/// the text as its caption (one bubble).
+class ChatDraft extends Equatable {
+  final String text;
+  final ChatAttachment? attachment;
+
+  const ChatDraft({this.text = '', this.attachment});
+
+  @override
+  List<Object?> get props => [text, attachment];
+
+  @override
+  String toString() {
+    return 'ChatDraft{text: $text, attachment: $attachment}';
+  }
+}
+
+/// Send texts and files in order, each after the previous one — events of
+/// different types are handled concurrently, so separate events could overtake.
+class ChatMessagesSubmitted extends ChatEvent {
+  final List<ChatDraft> drafts;
+
+  const ChatMessagesSubmitted({required this.drafts});
+
+  @override
+  List<Object?> get props => [drafts];
+
+  @override
+  String toString() {
+    return 'ChatMessagesSubmitted{drafts: $drafts}';
+  }
+}
+
 class ChatLocationSubmitted extends ChatEvent {
   final ChatLocation location;
 
