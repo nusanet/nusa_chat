@@ -13,6 +13,7 @@ import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/connect_chat_socket/connect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/disconnect_chat_socket/disconnect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/get_chat_history/get_chat_history.dart';
+import 'package:nusa_chat/src/features/domain/use_cases/send_chat_button_reply/send_chat_button_reply.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_location/send_chat_location.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_media/send_chat_media.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_text/send_chat_text.dart';
@@ -29,6 +30,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final SendChatText sendChatText;
   final SendChatMedia sendChatMedia;
   final SendChatLocation sendChatLocation;
+  final SendChatButtonReply sendChatButtonReply;
   final DisconnectChatSocket disconnectChatSocket;
 
   /// Delay before reconnect attempt `n` (0-based). Exponential, 1s → 30s.
@@ -41,6 +43,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required this.sendChatText,
     required this.sendChatMedia,
     required this.sendChatLocation,
+    required this.sendChatButtonReply,
     required this.disconnectChatSocket,
     Duration Function(int attempt)? reconnectDelay,
   }) : reconnectDelay = reconnectDelay ?? _defaultReconnectDelay,
@@ -50,6 +53,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     on<ChatAttachmentsSubmitted>(_onChatAttachmentsSubmitted);
     on<ChatMessagesSubmitted>(_onChatMessagesSubmitted);
     on<ChatLocationSubmitted>(_onChatLocationSubmitted);
+    on<ChatButtonReplySubmitted>(_onChatButtonReplySubmitted);
     on<ChatNoticeRequested>((event, emit) => _notify(emit, event.message));
     on<ChatMessageRetried>(_onChatMessageRetried);
     on<ChatReconnectRequested>(_onChatReconnectRequested);
@@ -227,18 +231,27 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         );
       case ChatMessageType.location:
         if (failed.location != null) await _sendLocation(failed.location!, emit);
+      case ChatMessageType.interactive:
+        if (failed.buttonReply != null) await _sendButtonReply(failed.buttonReply!, emit);
       case ChatMessageType.text || ChatMessageType.unknown:
         await _send(failed.text, emit);
     }
   }
 
-  ChatMessage _pending(ChatMessageType type, {String text = '', ChatMedia? media, ChatLocation? location}) {
+  ChatMessage _pending(
+    ChatMessageType type, {
+    String text = '',
+    ChatMedia? media,
+    ChatLocation? location,
+    ChatButton? buttonReply,
+  }) {
     return ChatMessage(
       localId: 'local-${DateTime.now().microsecondsSinceEpoch}-${_localSequence++}',
       text: text,
       type: type,
       media: media,
       location: location,
+      buttonReply: buttonReply,
       isMine: true,
       createdAt: DateTime.now(),
       status: ChatMessageStatus.pending,
@@ -347,6 +360,26 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     _onSent(emit, pending.localId, result);
   }
 
+  FutureOr<void> _onChatButtonReplySubmitted(ChatButtonReplySubmitted event, Emitter<ChatState> emit) async {
+    final index = state.messages.indexWhere((message) => message.localId == event.messageLocalId);
+    if (index < 0 || state.messages[index].isAnsweredBy(state.messages.skip(index + 1))) return;
+    await _sendButtonReply(event.button, emit);
+  }
+
+  Future<void> _sendButtonReply(ChatButton button, Emitter<ChatState> emit) async {
+    final pending = _pending(ChatMessageType.interactive, text: button.title, buttonReply: button);
+    emit(state.copyWith(messages: [...state.messages, pending]));
+
+    final session = _session;
+    if (session == null) {
+      _replace(emit, pending.localId, (message) => message.copyWith(status: ChatMessageStatus.failed));
+      return;
+    }
+
+    final result = await sendChatButtonReply(ParamsSendChatButtonReply(session: session, button: button));
+    _onSent(emit, pending.localId, result);
+  }
+
   /// Sent over HTTP: saved already (a `message_id`). Over WS: wait for the ack.
   void _onSent(Emitter<ChatState> emit, String localId, Either<Failure, String?> result) {
     if (emit.isDone) return;
@@ -434,6 +467,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ChatMessageType.document ||
       ChatMessageType.audio => local.media?.mediaId != null && local.media?.mediaId == server.media?.mediaId,
       ChatMessageType.location => local.location == server.location,
+      ChatMessageType.interactive => local.buttonReply?.id == server.buttonReply?.id,
       ChatMessageType.text || ChatMessageType.unknown => local.text == server.text,
     };
   }

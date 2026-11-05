@@ -121,4 +121,28 @@ void main() {
     expect(result, const Right('m-7'));
     verify(mockRemote.sendMessage('c1', const SendMessageBody.location(latitude: -6.2, longitude: 106.8)));
   });
+
+  group('sendButtonReply', () {
+    const tButton = ChatButton(id: 'naila_helpdesk_btn', title: 'Hubungi Helpdesk');
+    const tBody = SendMessageBody.buttonReply(buttonId: 'naila_helpdesk_btn', buttonTitle: 'Hubungi Helpdesk');
+
+    test('pastikan balasan tombol dikirim lewat WebSocket kalau terhubung', () async {
+      when(mockSocket.isOpen).thenReturn(true);
+
+      final result = await repository.sendButtonReply(tSession, tButton);
+
+      expect(result, const Right(null));
+      verify(mockSocket.send(tBody));
+    });
+
+    test('pastikan balasan tombol lewat fallback HTTP kalau socket tertutup', () async {
+      when(mockSocket.isOpen).thenReturn(false);
+      when(mockRemote.sendMessage(any, any)).thenAnswer((_) async => const SendMessageResponse(messageId: 'm-8'));
+
+      final result = await repository.sendButtonReply(tSession, tButton);
+
+      expect(result, const Right('m-8'));
+      verify(mockRemote.sendMessage('c1', tBody));
+    });
+  });
 }

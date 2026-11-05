@@ -227,7 +227,7 @@ class NusaChatStrings {
     }
 
     return switch (message.type) {
-      ChatMessageType.text => message.text,
+      ChatMessageType.text || ChatMessageType.interactive => message.text,
       ChatMessageType.image => withCaption(imageLabel),
       ChatMessageType.audio => withCaption(audioLabel),
       ChatMessageType.document =>

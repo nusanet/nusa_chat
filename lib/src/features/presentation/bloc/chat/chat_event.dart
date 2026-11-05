@@ -91,6 +91,23 @@ class ChatLocationSubmitted extends ChatEvent {
   }
 }
 
+/// The visitor tapped [button] of the agent message [messageLocalId]. Ignored
+/// when that message is already answered, so a double tap sends one reply.
+class ChatButtonReplySubmitted extends ChatEvent {
+  final String messageLocalId;
+  final ChatButton button;
+
+  const ChatButtonReplySubmitted({required this.messageLocalId, required this.button});
+
+  @override
+  List<Object?> get props => [messageLocalId, button];
+
+  @override
+  String toString() {
+    return 'ChatButtonReplySubmitted{messageLocalId: $messageLocalId, button: $button}';
+  }
+}
+
 /// Show a one-off notice, e.g. a picked file the bridge would reject.
 class ChatNoticeRequested extends ChatEvent {
   final String message;

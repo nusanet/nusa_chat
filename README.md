@@ -56,6 +56,21 @@ This is the same `POST /v1/widget/{website_id}/sessions` the chat screen makes, 
 (e.g. closed after 24h idle) the server opens a new one. Failures throw `NusaChatException` (`message`,
 `statusCode`).
 
+### Conversation history in your own views
+
+```dart
+final client = NusaChatClient(config);
+final page = await client.getConversations(page: 1, limit: 20); // open and closed, latest activity first
+final thread = await client.getConversationMessages(page.conversations.first.id); // oldest first
+final messages = await client.getVisitorMessages(limit: 50);    // all conversations, newest first
+await client.dispose();
+```
+
+Neither opens a conversation. The visitor is `NusaChatConfig.visitorId`, or the id remembered from an earlier chat;
+without either the result is empty. An id the server does not know throws `NusaChatException` with status 404.
+`page.hasMore` tells whether to fetch the next page; `ChatMessage.conversationId` groups messages by conversation.
+The example app's "Riwayat percakapan" screen (`example/lib/history_page.dart`) shows them in use.
+
 ### Opening with a message
 
 ```dart

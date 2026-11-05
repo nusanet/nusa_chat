@@ -7,6 +7,10 @@ enum ChatMessageType {
   document,
   audio,
   location,
+
+  /// The agent's text with [ChatMessage.buttons], or the visitor's tap on one
+  /// of them ([ChatMessage.buttonReply]).
+  interactive,
   unknown;
 
   static ChatMessageType fromValue(String? value) {
@@ -100,6 +104,20 @@ class ChatLocation extends Equatable {
   String toString() => 'ChatLocation{latitude: $latitude, longitude: $longitude}';
 }
 
+/// A reply button of an agent message.
+class ChatButton extends Equatable {
+  final String id;
+  final String title;
+
+  const ChatButton({required this.id, required this.title});
+
+  @override
+  List<Object?> get props => [id, title];
+
+  @override
+  String toString() => 'ChatButton{id: $id, title: $title}';
+}
+
 /// One message in the conversation, from the visitor ([isMine]) or the agent.
 class ChatMessage extends Equatable {
   /// Server `message_id`; null until the message is acknowledged.
@@ -107,6 +125,10 @@ class ChatMessage extends Equatable {
 
   /// Stable id for list keys and retries; equals [id] for server messages.
   final String localId;
+
+  /// The conversation the message belongs to. Only known for messages loaded
+  /// from the server's history; null for live and locally sent ones.
+  final String? conversationId;
 
   /// The text, or the caption of a media message.
   final String text;
@@ -117,6 +139,12 @@ class ChatMessage extends Equatable {
 
   /// The point of a location message.
   final ChatLocation? location;
+
+  /// The buttons of an agent message.
+  final List<ChatButton> buttons;
+
+  /// The button the visitor tapped, on the message that answers [buttons].
+  final ChatButton? buttonReply;
 
   /// 0–1 while the file of a pending message is uploading; null otherwise.
   final double? uploadProgress;
@@ -130,16 +158,26 @@ class ChatMessage extends Equatable {
   const ChatMessage({
     this.id,
     required this.localId,
+    this.conversationId,
     required this.text,
     this.type = ChatMessageType.text,
     this.media,
     this.location,
+    this.buttons = const [],
+    this.buttonReply,
     this.uploadProgress,
     required this.isMine,
     required this.createdAt,
     this.status = ChatMessageStatus.sent,
     this.error,
   });
+
+  /// Whether one of [later], the messages after this one, answers [buttons].
+  /// A failed answer counts: it is resent from its own bubble, so the buttons
+  /// must not send a second one.
+  bool isAnsweredBy(Iterable<ChatMessage> later) {
+    return later.any((message) => buttons.any((button) => button.id == message.buttonReply?.id));
+  }
 
   /// [uploadProgress] and [error] are cleared unless given.
   ChatMessage copyWith({
@@ -153,10 +191,13 @@ class ChatMessage extends Equatable {
     return ChatMessage(
       id: id ?? this.id,
       localId: localId,
+      conversationId: conversationId,
       text: text,
       type: type,
       media: media ?? this.media,
       location: location,
+      buttons: buttons,
+      buttonReply: buttonReply,
       uploadProgress: uploadProgress,
       isMine: isMine,
       createdAt: createdAt ?? this.createdAt,
@@ -169,10 +210,13 @@ class ChatMessage extends Equatable {
   List<Object?> get props => [
     id,
     localId,
+    conversationId,
     text,
     type,
     media,
     location,
+    buttons,
+    buttonReply,
     uploadProgress,
     isMine,
     createdAt,
@@ -182,6 +226,6 @@ class ChatMessage extends Equatable {
 
   @override
   String toString() {
-    return 'ChatMessage{id: $id, localId: $localId, text: $text, type: $type, media: $media, location: $location, uploadProgress: $uploadProgress, isMine: $isMine, createdAt: $createdAt, status: $status, error: $error}';
+    return 'ChatMessage{id: $id, localId: $localId, conversationId: $conversationId, text: $text, type: $type, media: $media, location: $location, buttons: $buttons, buttonReply: $buttonReply, uploadProgress: $uploadProgress, isMine: $isMine, createdAt: $createdAt, status: $status, error: $error}';
   }
 }

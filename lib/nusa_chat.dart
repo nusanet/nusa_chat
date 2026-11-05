@@ -8,6 +8,7 @@ export 'src/core/theme/nusa_chat_theme.dart';
 export 'src/core/util/emoji/emoji.dart';
 export 'src/core/util/icons.dart' show BaseIcons;
 export 'src/features/domain/entities/chat_attachment.dart';
+export 'src/features/domain/entities/chat_conversation.dart';
 export 'src/features/domain/entities/chat_message.dart';
 export 'src/features/domain/entities/chat_session.dart';
 export 'src/features/presentation/bloc/chat/chat_state.dart' show ChatConnectionStatus;

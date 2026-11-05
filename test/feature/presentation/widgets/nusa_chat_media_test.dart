@@ -11,6 +11,7 @@ import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/connect_chat_socket/connect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/disconnect_chat_socket/disconnect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/get_chat_history/get_chat_history.dart';
+import 'package:nusa_chat/src/features/domain/use_cases/send_chat_button_reply/send_chat_button_reply.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_location/send_chat_location.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_media/send_chat_media.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_text/send_chat_text.dart';
@@ -87,6 +88,7 @@ void main() {
     sendChatText: SendChatText(repository: mockRepository),
     sendChatMedia: SendChatMedia(repository: mockRepository),
     sendChatLocation: SendChatLocation(repository: mockRepository),
+    sendChatButtonReply: SendChatButtonReply(repository: mockRepository),
     disconnectChatSocket: DisconnectChatSocket(repository: mockRepository),
   );
 

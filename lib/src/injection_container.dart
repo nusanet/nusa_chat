@@ -12,6 +12,7 @@ import 'package:nusa_chat/src/features/domain/repositories/chat/chat_repository.
 import 'package:nusa_chat/src/features/domain/use_cases/connect_chat_socket/connect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/disconnect_chat_socket/disconnect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/get_chat_history/get_chat_history.dart';
+import 'package:nusa_chat/src/features/domain/use_cases/send_chat_button_reply/send_chat_button_reply.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_location/send_chat_location.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_media/send_chat_media.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_text/send_chat_text.dart';
@@ -44,6 +45,7 @@ class NusaChatInjector {
         sendChatText: sl(),
         sendChatMedia: sl(),
         sendChatLocation: sl(),
+        sendChatButtonReply: sl(),
         disconnectChatSocket: sl(),
       ),
     );
@@ -55,6 +57,7 @@ class NusaChatInjector {
     sl.registerLazySingleton(() => SendChatText(repository: sl()));
     sl.registerLazySingleton(() => SendChatMedia(repository: sl()));
     sl.registerLazySingleton(() => SendChatLocation(repository: sl()));
+    sl.registerLazySingleton(() => SendChatButtonReply(repository: sl()));
     sl.registerLazySingleton(() => DisconnectChatSocket(repository: sl()));
 
     // Repository

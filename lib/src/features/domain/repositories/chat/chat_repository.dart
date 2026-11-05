@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:nusa_chat/src/core/error/failure.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
+import 'package:nusa_chat/src/features/domain/entities/chat_conversation.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_session.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
@@ -11,6 +12,22 @@ abstract class ChatRepository {
 
   /// Messages of [session], oldest first; only those after [since] when given.
   Future<Either<Failure, List<ChatMessage>>> getMessages(ChatSession session, {DateTime? since});
+
+  /// Messages of any of the visitor's conversations, open or closed, oldest first.
+  Future<Either<Failure, List<ChatMessage>>> getConversationMessages(String conversationId);
+
+  /// The visitor's messages across all conversations, newest first: at most
+  /// [limit], only those after [since] when given. Empty, without a request,
+  /// when no visitor id is known yet.
+  Future<Either<Failure, List<ChatMessage>>> getVisitorMessages({required int limit, DateTime? since});
+
+  /// A page of the visitor's conversations, including closed ones. Empty,
+  /// without a request, when no visitor id is known yet.
+  Future<Either<Failure, ChatConversationPage>> getConversations({
+    required ChatConversationOrder order,
+    required int page,
+    required int limit,
+  });
 
   /// Opens the real-time connection. Ends with [ChatSocketClosed].
   Stream<ChatSocketEvent> connect(ChatSession session);
@@ -31,6 +48,10 @@ abstract class ChatRepository {
 
   /// Same socket/HTTP rules as [sendText].
   Future<Either<Failure, String?>> sendLocation(ChatSession session, ChatLocation location);
+
+  /// Tells the agent which [button] the visitor tapped; same socket/HTTP rules
+  /// as [sendText].
+  Future<Either<Failure, String?>> sendButtonReply(ChatSession session, ChatButton button);
 
   /// Where an uploaded file can be fetched.
   String mediaUrl(String mediaId);

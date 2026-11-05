@@ -14,6 +14,8 @@ SendMessageBody _$SendMessageBodyFromJson(Map<String, dynamic> json) => SendMess
   caption: json['caption'] as String?,
   latitude: (json['latitude'] as num?)?.toDouble(),
   longitude: (json['longitude'] as num?)?.toDouble(),
+  buttonId: json['button_id'] as String?,
+  buttonTitle: json['button_title'] as String?,
 );
 
 Map<String, dynamic> _$SendMessageBodyToJson(SendMessageBody instance) => <String, dynamic>{
@@ -24,4 +26,6 @@ Map<String, dynamic> _$SendMessageBodyToJson(SendMessageBody instance) => <Strin
   'caption': ?instance.caption,
   'latitude': ?instance.latitude,
   'longitude': ?instance.longitude,
+  'button_id': ?instance.buttonId,
+  'button_title': ?instance.buttonTitle,
 };

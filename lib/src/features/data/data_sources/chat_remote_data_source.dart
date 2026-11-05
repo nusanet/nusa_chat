@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:nusa_chat/src/config/nusa_chat_config.dart';
+import 'package:nusa_chat/src/features/data/models/conversation/list_conversation_response.dart';
 import 'package:nusa_chat/src/features/data/models/media/upload_media_response.dart';
 import 'package:nusa_chat/src/features/data/models/message/list_message_response.dart';
 import 'package:nusa_chat/src/features/data/models/message/send_message_body.dart';
@@ -13,6 +14,17 @@ abstract class ChatRemoteDataSource {
   Future<SessionResponse> createSession(SessionBody body);
 
   Future<ListMessageResponse> getMessages(String conversationId, {DateTime? since});
+
+  /// The messages of all conversations of a visitor, newest first.
+  Future<ListMessageResponse> getVisitorMessages(String visitorId, {required int limit, DateTime? since});
+
+  /// [order] is the bridge's `asc` or `desc`, by last activity.
+  Future<ListConversationResponse> getVisitorConversations(
+    String visitorId, {
+    required String order,
+    required int page,
+    required int limit,
+  });
 
   /// HTTP fallback for when the WebSocket is not open — same body as over WS.
   Future<SendMessageResponse> sendMessage(String conversationId, SendMessageBody body);
@@ -60,6 +72,42 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     );
     if (response.statusCode == 200) {
       return ListMessageResponse.fromJson(response.data);
+    } else {
+      throw DioException(
+        requestOptions: RequestOptions(path: path),
+        response: response,
+      );
+    }
+  }
+
+  @override
+  Future<ListMessageResponse> getVisitorMessages(String visitorId, {required int limit, DateTime? since}) async {
+    final path = '$_widgetPath/visitors/${Uri.encodeComponent(visitorId)}/messages';
+    final response = await dio.get(
+      path,
+      queryParameters: {'limit': limit, if (since != null) 'since': since.toUtc().toIso8601String()},
+    );
+    if (response.statusCode == 200) {
+      return ListMessageResponse.fromJson(response.data);
+    } else {
+      throw DioException(
+        requestOptions: RequestOptions(path: path),
+        response: response,
+      );
+    }
+  }
+
+  @override
+  Future<ListConversationResponse> getVisitorConversations(
+    String visitorId, {
+    required String order,
+    required int page,
+    required int limit,
+  }) async {
+    final path = '$_widgetPath/visitors/${Uri.encodeComponent(visitorId)}/conversations';
+    final response = await dio.get(path, queryParameters: {'order': order, 'page': page, 'limit': limit});
+    if (response.statusCode == 200) {
+      return ListConversationResponse.fromJson(response.data);
     } else {
       throw DioException(
         requestOptions: RequestOptions(path: path),

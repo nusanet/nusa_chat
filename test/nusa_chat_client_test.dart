@@ -51,6 +51,75 @@ void main() {
     });
   });
 
+  group('getConversations', () {
+    const tPage = ChatConversationPage(conversations: [], page: 1, limit: 20, total: 0, totalPages: 0);
+
+    test('pastikan default sesuai bridge: terbaru dulu, halaman 1, 20 baris', () async {
+      when(
+        mockRepository.getConversations(order: ChatConversationOrder.desc, page: 1, limit: 20),
+      ).thenAnswer((_) async => const Right(tPage));
+
+      expect(await client.getConversations(), tPage);
+    });
+
+    test('pastikan parameter diteruskan', () async {
+      when(
+        mockRepository.getConversations(order: ChatConversationOrder.asc, page: 3, limit: 5),
+      ).thenAnswer((_) async => const Right(tPage));
+
+      expect(await client.getConversations(order: ChatConversationOrder.asc, page: 3, limit: 5), tPage);
+    });
+
+    test('pastikan failure jadi NusaChatException', () async {
+      when(
+        mockRepository.getConversations(order: anyNamed('order'), page: anyNamed('page'), limit: anyNamed('limit')),
+      ).thenAnswer((_) async => Left(ServerFailure(const DataApiFailure(statusCode: 404, message: 'x'))));
+
+      expect(client.getConversations, throwsA(isA<NusaChatException>().having((e) => e.statusCode, 'statusCode', 404)));
+    });
+  });
+
+  group('getConversationMessages', () {
+    final tMessage = ChatMessage(localId: 'm', text: 'x', isMine: true, createdAt: DateTime.utc(2026));
+
+    test('pastikan pesan conversation diteruskan', () async {
+      when(mockRepository.getConversationMessages('c-1')).thenAnswer((_) async => Right([tMessage]));
+
+      expect(await client.getConversationMessages('c-1'), [tMessage]);
+    });
+
+    test('pastikan failure jadi NusaChatException', () async {
+      when(mockRepository.getConversationMessages(any)).thenAnswer((_) async => Left(ConnectionFailure()));
+
+      expect(() => client.getConversationMessages('c-1'), throwsA(isA<NusaChatException>()));
+    });
+  });
+
+  group('getVisitorMessages', () {
+    final tMessage = ChatMessage(localId: 'm', text: 'x', isMine: true, createdAt: DateTime.utc(2026));
+
+    test('pastikan default 50 pesan tanpa since', () async {
+      when(mockRepository.getVisitorMessages(limit: 50)).thenAnswer((_) async => Right([tMessage]));
+
+      expect(await client.getVisitorMessages(), [tMessage]);
+    });
+
+    test('pastikan limit dan since diteruskan', () async {
+      final since = DateTime.utc(2026);
+      when(mockRepository.getVisitorMessages(limit: 5, since: since)).thenAnswer((_) async => Right([tMessage]));
+
+      expect(await client.getVisitorMessages(limit: 5, since: since), [tMessage]);
+    });
+
+    test('pastikan failure jadi NusaChatException', () async {
+      when(
+        mockRepository.getVisitorMessages(limit: anyNamed('limit'), since: anyNamed('since')),
+      ).thenAnswer((_) async => Left(ConnectionFailure()));
+
+      expect(client.getVisitorMessages, throwsA(isA<NusaChatException>()));
+    });
+  });
+
   test('pastikan klien dari config bisa dibuat dan dibuang', () async {
     final real = NusaChatClient(const NusaChatConfig(baseUrl: 'https://x', websiteId: 'w', origin: 'o'));
     await real.dispose();

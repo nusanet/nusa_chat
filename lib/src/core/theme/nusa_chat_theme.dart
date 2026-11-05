@@ -43,6 +43,14 @@ class NusaChatTheme {
   final double bubbleTailRadius;
   final double bubbleMaxWidth;
 
+  // ---- reply buttons ----
+  /// Fill of the buttons under an agent message; shadow as the agent bubble.
+  final Color messageButtonColor;
+  final TextStyle messageButtonTextStyle;
+
+  /// Opacity of the buttons once the message is answered.
+  final double messageButtonDisabledOpacity;
+
   // ---- composer ----
   final Color composerColor;
   final Color inputFillColor;
@@ -142,6 +150,9 @@ class NusaChatTheme {
     required this.bubbleRadius,
     required this.bubbleTailRadius,
     required this.bubbleMaxWidth,
+    required this.messageButtonColor,
+    required this.messageButtonTextStyle,
+    required this.messageButtonDisabledOpacity,
     required this.composerColor,
     required this.inputFillColor,
     required this.inputBorderColor,
@@ -204,6 +215,9 @@ class NusaChatTheme {
       bubbleRadius: 16,
       bubbleTailRadius: 4,
       bubbleMaxWidth: 240,
+      messageButtonColor: BaseColor.surfaceDefault,
+      messageButtonTextStyle: BaseTypography.p3Medium.withColor(BaseColor.actionPrimaryBg),
+      messageButtonDisabledOpacity: 0.5,
       composerColor: BaseColor.surfaceDefault,
       inputFillColor: BaseColor.surfaceSubtle,
       inputBorderColor: BaseColor.borderDefault,
@@ -286,6 +300,9 @@ class NusaChatTheme {
     double? bubbleRadius,
     double? bubbleTailRadius,
     double? bubbleMaxWidth,
+    Color? messageButtonColor,
+    TextStyle? messageButtonTextStyle,
+    double? messageButtonDisabledOpacity,
     Color? composerColor,
     Color? inputFillColor,
     Color? inputBorderColor,
@@ -342,6 +359,9 @@ class NusaChatTheme {
       bubbleRadius: bubbleRadius ?? this.bubbleRadius,
       bubbleTailRadius: bubbleTailRadius ?? this.bubbleTailRadius,
       bubbleMaxWidth: bubbleMaxWidth ?? this.bubbleMaxWidth,
+      messageButtonColor: messageButtonColor ?? this.messageButtonColor,
+      messageButtonTextStyle: messageButtonTextStyle ?? this.messageButtonTextStyle,
+      messageButtonDisabledOpacity: messageButtonDisabledOpacity ?? this.messageButtonDisabledOpacity,
       composerColor: composerColor ?? this.composerColor,
       inputFillColor: inputFillColor ?? this.inputFillColor,
       inputBorderColor: inputBorderColor ?? this.inputBorderColor,

@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nusa_chat/nusa_chat.dart';
 
+import 'history_page.dart';
+
 /// Backend settings, passed at build time:
 ///
 /// ```sh
@@ -93,6 +95,19 @@ class HomePage extends StatelessWidget {
             icon: const Icon(Icons.palette_outlined),
             label: const Text('Buka NusaChat (kustom)'),
             onPressed: () => NusaChat.open(context, page: _customized(context)),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.history),
+            label: const Text('Riwayat percakapan'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ConversationHistoryPage(
+                  client: NusaChatClient(_config),
+                  googleMap: _googleMapsKey.isEmpty ? null : const NusaChatGoogleMap(apiKey: _googleMapsKey),
+                ),
+              ),
+            ),
           ),
         ],
       ),

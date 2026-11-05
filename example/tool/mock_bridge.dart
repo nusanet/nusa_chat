@@ -5,6 +5,8 @@
 //   POST /v1/widget/{website_id}/sessions
 //   GET  /v1/widget/{website_id}/conversations/{conversation_id}/messages[?since=]
 //   POST /v1/widget/{website_id}/conversations/{conversation_id}/messages   (HTTP fallback)
+//   GET  /v1/widget/{website_id}/visitors/{visitor_id}/conversations[?order=&page=&limit=]
+//   GET  /v1/widget/{website_id}/visitors/{visitor_id}/messages[?limit=&since=]
 //   WS   /v1/ws?visitor_id=..&conversation_id=..                           (Origin checked)
 // plus a helper to play the agent:
 //   POST /agent/{visitor_id}   body: {"text": "..."}
@@ -28,8 +30,14 @@ class _Conversation {
   final String id;
   final String visitorId;
   final List<Map<String, dynamic>> messages = [];
+  final String? closedAt;
+  final String _createdAt = DateTime.now().toUtc().toIso8601String();
 
-  _Conversation(this.id, this.visitorId);
+  _Conversation(this.id, this.visitorId, {this.closedAt});
+
+  String get openedAt => messages.isEmpty ? _createdAt : messages.first['created_at'] as String;
+
+  String get lastActivityAt => messages.isEmpty ? _createdAt : messages.last['created_at'] as String;
 }
 
 late final String _allowedOrigin;
@@ -85,6 +93,12 @@ Future<void> _handle(HttpRequest request) async {
     if (request.method == 'POST' && segments.length == 4 && segments[3] == 'sessions') {
       return _createSession(request);
     }
+    if (request.method == 'GET' && segments.length == 6 && segments[3] == 'visitors') {
+      final threads = _conversations.values.where((c) => c.visitorId == segments[4]).toList();
+      if (threads.isEmpty) return _json(request, 404, {'error': 'visitor tidak ditemukan'});
+      if (segments[5] == 'conversations') return _listConversations(request, threads);
+      if (segments[5] == 'messages') return _listVisitorMessages(request, threads);
+    }
     if (segments.length == 6 && segments[3] == 'conversations' && segments[5] == 'messages') {
       final conversation = _conversations[segments[4]];
       if (conversation == null) return _json(request, 404, {'error': 'conversation tidak ditemukan'});
@@ -105,6 +119,81 @@ Future<void> _handle(HttpRequest request) async {
   return _json(request, 404, {'error': 'not found'});
 }
 
+Future<void> _listConversations(HttpRequest request, List<_Conversation> threads) {
+  final query = request.uri.queryParameters;
+  final page = int.tryParse(query['page'] ?? '1') ?? 1;
+  final limit = int.tryParse(query['limit'] ?? '20') ?? 20;
+  final direction = query['order'] == 'asc' ? 1 : -1;
+  threads.sort((a, b) => direction * a.lastActivityAt.compareTo(b.lastActivityAt));
+  return _json(request, 200, {
+    'data': [
+      for (final thread in threads.skip((page - 1) * limit).take(limit))
+        {
+          'conversation_id': thread.id,
+          'visitor_id': thread.visitorId,
+          'status': thread.closedAt == null ? 'open' : 'closed',
+          'opened_at': thread.openedAt,
+          'last_activity_at': thread.lastActivityAt,
+          'closed_at': thread.closedAt,
+        },
+    ],
+    'pagination': {
+      'page': page,
+      'limit': limit,
+      'total': threads.length,
+      'total_pages': (threads.length / limit).ceil(),
+    },
+  });
+}
+
+Future<void> _listVisitorMessages(HttpRequest request, List<_Conversation> threads) {
+  final since = DateTime.tryParse(request.uri.queryParameters['since'] ?? '');
+  final limit = int.tryParse(request.uri.queryParameters['limit'] ?? '50') ?? 50;
+  final rows =
+      threads
+          .expand((thread) => thread.messages)
+          .where((m) => since == null || DateTime.parse(m['created_at'] as String).isAfter(since))
+          .toList()
+        ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+  return _json(request, 200, {'data': rows.take(limit).toList()});
+}
+
+/// An older, closed conversation, so the history has more than the open one.
+void _seedClosedConversation(String visitorId) {
+  final closedAt = DateTime.now().toUtc().subtract(const Duration(days: 3));
+  final thread = _Conversation(_uuid(), visitorId, closedAt: closedAt.toIso8601String());
+  _conversations[thread.id] = thread;
+  thread.messages.addAll([
+    {
+      'message_id': _uuid(),
+      'conversation_id': thread.id,
+      'visitor_id': visitorId,
+      'direction': 'inbound',
+      'type': 'text',
+      'body': 'Bagaimana cara reset password MyNusa?',
+      'media_url': null,
+      'status': 'sent',
+      'created_at': closedAt.subtract(const Duration(hours: 25)).toIso8601String(),
+    },
+    {
+      'message_id': _uuid(),
+      'conversation_id': thread.id,
+      'visitor_id': visitorId,
+      'direction': 'outbound',
+      'type': 'interactive',
+      'body': jsonEncode({
+        'text': 'Buka menu Profil > Keamanan > Ganti Password.',
+        'buttons': [
+          {'id': 'naila_helpdesk_btn', 'title': 'Hubungi Helpdesk'},
+        ],
+      }),
+      'media_url': null,
+      'status': 'sent',
+      'created_at': closedAt.subtract(const Duration(hours: 24)).toIso8601String(),
+    },
+  ]);
+}
+
 Future<void> _createSession(HttpRequest request) async {
   final body = await _readJson(request);
   var visitorId = body['visitor_id']?.toString();
@@ -118,7 +207,10 @@ Future<void> _createSession(HttpRequest request) async {
     conversation = _Conversation(_uuid(), visitorId);
     _conversations[conversation.id] = conversation;
     _visitorConversation[visitorId] = conversation.id;
-    if (_seed) _seedSampleConversation(conversation);
+    if (_seed) {
+      _seedSampleConversation(conversation);
+      _seedClosedConversation(visitorId);
+    }
   }
   return _json(request, 200, {
     'visitor_id': visitorId,

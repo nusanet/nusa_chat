@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:nusa_chat/src/features/data/models/message/chat_button_json.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
 
@@ -23,6 +24,7 @@ sealed class SocketEventModel extends Equatable {
           caption: json['caption'] as String?,
           mediaUrl: json['media_url'] as String?,
           filename: json['filename'] as String?,
+          buttons: chatButtonsFromJson(json['buttons']),
           from: json['from'] as String?,
           createdAt: json['created_at'] as String?,
         );
@@ -60,7 +62,7 @@ class SocketErrorModel extends SocketEventModel {
   List<Object?> get props => [error];
 }
 
-/// `{type: "message", from: "agent", message_type, body | media_url+caption(+filename), message_id}`.
+/// `{type: "message", from: "agent", message_type, body(+buttons) | media_url+caption(+filename), message_id}`.
 /// The agent's `media_url` is a direct link (docs/13-media-support.md § Temuan penting).
 class SocketAgentMessageModel extends SocketEventModel {
   final String? messageId;
@@ -69,6 +71,7 @@ class SocketAgentMessageModel extends SocketEventModel {
   final String? caption;
   final String? mediaUrl;
   final String? filename;
+  final List<ChatButton> buttons;
   final String? from;
   final String? createdAt;
 
@@ -79,6 +82,7 @@ class SocketAgentMessageModel extends SocketEventModel {
     this.caption,
     this.mediaUrl,
     this.filename,
+    this.buttons = const [],
     this.from,
     this.createdAt,
   });
@@ -90,9 +94,10 @@ class SocketAgentMessageModel extends SocketEventModel {
       message: ChatMessage(
         id: messageId,
         localId: messageId ?? 'agent-${DateTime.now().microsecondsSinceEpoch}',
-        text: (type == ChatMessageType.text ? body : caption) ?? '',
+        text: (type == ChatMessageType.text || type == ChatMessageType.interactive ? body : caption) ?? '',
         type: type,
         media: mediaUrl == null || mediaUrl!.isEmpty ? null : ChatMedia(url: mediaUrl, fileName: filename),
+        buttons: buttons,
         isMine: false,
         // The agent push carries no timestamp; it is shown as "now".
         createdAt: DateTime.tryParse(createdAt ?? '') ?? DateTime.now(),
@@ -102,7 +107,7 @@ class SocketAgentMessageModel extends SocketEventModel {
   }
 
   @override
-  List<Object?> get props => [messageId, messageType, body, caption, mediaUrl, filename, from, createdAt];
+  List<Object?> get props => [messageId, messageType, body, caption, mediaUrl, filename, buttons, from, createdAt];
 }
 
 class SocketUnknownModel extends SocketEventModel {

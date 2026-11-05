@@ -4,7 +4,8 @@ import 'package:nusa_chat/src/features/data/models/message/message_response.dart
 
 part 'list_message_response.g.dart';
 
-/// Response of `GET .../conversations/{conversation_id}/messages`: `{data: MessageRow[]}`.
+/// Response of `GET .../conversations/{conversation_id}/messages` and
+/// `GET .../visitors/{visitor_id}/messages`: `{data: MessageRow[]}`.
 @JsonSerializable(explicitToJson: true)
 class ListMessageResponse extends Equatable {
   @JsonKey(name: 'data')

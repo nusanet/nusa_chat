@@ -170,6 +170,17 @@ void main() {
     });
   });
 
+  test('pastikan getConversationMessages memakai conversation_id yang diminta', () async {
+    when(
+      mockRemote.getMessages('lama', since: anyNamed('since')),
+    ).thenAnswer((_) async => ListMessageResponse.fromJson(fixtureJson('list_message_response.json')));
+
+    final result = await repository.getConversationMessages('lama');
+
+    expect(result.getOrElse(() => []).length, 2);
+    verify(mockRemote.getMessages('lama'));
+  });
+
   group('sendText', () {
     test('pastikan lewat WebSocket kalau terhubung', () async {
       when(mockSocket.isOpen).thenReturn(true);

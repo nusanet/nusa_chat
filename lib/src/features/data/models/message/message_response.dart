@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:nusa_chat/src/core/util/date_helper.dart';
+import 'package:nusa_chat/src/features/data/models/message/chat_button_json.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 
 part 'message_response.g.dart';
@@ -11,7 +12,9 @@ part 'message_response.g.dart';
 ///
 /// `body` means something different per `type` (docs/13-media-support.md):
 /// text → the text; location → JSON `{latitude, longitude}`; image/audio →
-/// caption; document → JSON `{caption, filename}`.
+/// caption; document → JSON `{caption, filename}`; interactive → JSON
+/// `{text, buttons}` from the agent, `{id, title}` for the visitor's tap
+/// (docs/04-api.md, docs/03-database.md).
 @JsonSerializable()
 class MessageResponse extends Equatable {
   @JsonKey(name: 'message_id')
@@ -56,8 +59,19 @@ class MessageResponse extends Equatable {
     var text = body ?? '';
     String? fileName;
     ChatLocation? location;
+    var buttons = const <ChatButton>[];
+    ChatButton? buttonReply;
 
-    if (messageType == ChatMessageType.document) {
+    if (messageType == ChatMessageType.interactive) {
+      final json = _tryDecodeObject(body);
+      if (json != null && isMine) {
+        buttonReply = chatButtonFromJson(json);
+        text = buttonReply?.title ?? '';
+      } else if (json != null) {
+        text = json['text']?.toString() ?? '';
+        buttons = chatButtonsFromJson(json['buttons']);
+      }
+    } else if (messageType == ChatMessageType.document) {
       final json = _tryDecodeObject(body);
       if (json != null) {
         text = json['caption']?.toString() ?? '';
@@ -87,10 +101,13 @@ class MessageResponse extends Equatable {
     return ChatMessage(
       id: messageId,
       localId: messageId ?? '',
+      conversationId: conversationId,
       text: text,
       type: messageType,
       media: media,
       location: location,
+      buttons: buttons,
+      buttonReply: buttonReply,
       isMine: isMine,
       createdAt: DateHelper.tryParseServerDate(createdAt) ?? DateTime.now(),
       status: status == 'failed' && isMine ? ChatMessageStatus.failed : ChatMessageStatus.sent,

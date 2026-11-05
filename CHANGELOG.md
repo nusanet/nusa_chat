@@ -1,3 +1,22 @@
+## Unreleased
+
+* `NusaChatClient.getConversations()`: a page of the visitor's conversations, including closed ones
+  (`ChatConversationPage`, `ChatConversation`).
+* `NusaChatClient.getVisitorMessages()`: the visitor's messages across all conversations, newest first.
+  `ChatMessage.conversationId` tells which conversation each belongs to.
+* `NusaChatClient.getConversationMessages()`: the messages of one conversation, open or closed.
+* Reply buttons: agent `interactive` messages show their buttons under the bubble (`NusaChatMessageButtons`). A tap
+  sends a `button_reply` and shows its title as the visitor's message; the buttons then stay disabled. Needs a
+  bridge with `interactive` support (migration `0008_interactive_message_type`).
+* `ChatMessageType.interactive`, `ChatButton`, `ChatMessage.buttons`, `ChatMessage.buttonReply`. Custom rows get
+  `NusaChatMessageData.onButtonTap`.
+
+**Breaking / visible changes**
+
+* `NusaChatTheme`'s constructor has new required parameters (`messageButtonColor`, `messageButtonTextStyle`,
+  `messageButtonDisabledOpacity`). Themes made from `NusaChatTheme.fallback().copyWith(...)` are unaffected.
+* `ChatMessageType` has a new value, so an exhaustive `switch` on it in a host app must handle `interactive`.
+
 ## 0.4.0
 
 * `NusaChatPage.initialMessages`: what the chat opens with, as `NusaChatInitialMessage`s — a text, images

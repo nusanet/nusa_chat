@@ -128,6 +128,10 @@ class NusaChatMessageData {
   /// Shows the message actions (copy); null when there is no text to copy.
   final VoidCallback? onLongPress;
 
+  /// Sends the tapped button of [ChatMessage.buttons]; null when the message
+  /// has none or is already answered.
+  final ValueChanged<ChatButton>? onButtonTap;
+
   const NusaChatMessageData({
     required this.message,
     required this.displayText,
@@ -135,6 +139,7 @@ class NusaChatMessageData {
     required this.showSender,
     this.onRetry,
     this.onLongPress,
+    this.onButtonTap,
   });
 }
 
@@ -915,7 +920,12 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
         final newDay =
             previous == null || !DateUtils.isSameDay(previous.createdAt.toLocal(), message.createdAt.toLocal());
         final sameSender = !newDay && previous.isMine == message.isMine;
-        final row = _buildMessage(context, message, showSender: !message.isMine && !sameSender);
+        final row = _buildMessage(
+          context,
+          message,
+          showSender: !message.isMine && !sameSender,
+          answered: message.isAnsweredBy(messages.skip(index + 1)),
+        );
         return _TrackedRow(
           key: ValueKey(message.localId),
           id: message.localId,
@@ -1002,7 +1012,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
     _floatingDateTimer = Timer(const Duration(milliseconds: 1200), () => _floatingDate.value = null);
   }
 
-  Widget _buildMessage(BuildContext context, ChatMessage message, {required bool showSender}) {
+  Widget _buildMessage(BuildContext context, ChatMessage message, {required bool showSender, required bool answered}) {
     final failed = message.status == ChatMessageStatus.failed;
     final data = NusaChatMessageData(
       message: message,
@@ -1011,6 +1021,9 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
       showSender: showSender,
       onRetry: failed ? () => _bloc.add(ChatMessageRetried(localId: message.localId)) : null,
       onLongPress: _copyableText(message) == null ? null : () => _showMessageActions(message),
+      onButtonTap: message.buttons.isEmpty || answered
+          ? null
+          : (button) => _bloc.add(ChatButtonReplySubmitted(messageLocalId: message.localId, button: button)),
     );
 
     final media = _buildMediaContent(message, interactive: !failed);
@@ -1032,6 +1045,9 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
       avatar: widget.agentAvatarBuilder?.call(context) ?? const NusaChatAvatar(),
       showSender: showSender,
       errorText: failed ? widget.strings.failedToSend : null,
+      footer: message.buttons.isEmpty
+          ? null
+          : NusaChatMessageButtons(buttons: message.buttons, onTap: data.onButtonTap),
     );
     return widget.messageBuilder?.call(context, data, row) ?? row;
   }
@@ -1096,7 +1112,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
           googleMap: widget.attachments.googleMap,
           onTap: interactive ? () => _open(location.mapsUri) : null,
         );
-      case ChatMessageType.text || ChatMessageType.unknown:
+      case ChatMessageType.text || ChatMessageType.interactive || ChatMessageType.unknown:
         return null;
     }
   }

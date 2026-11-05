@@ -63,6 +63,7 @@ void main() {
         ChatMessage(
           id: 'm-1',
           localId: 'm-1',
+          conversationId: 'd732131d-b076-4eed-9492-535fbc4cd1c5',
           text: 'Halo, selamat pagi.',
           isMine: true,
           createdAt: DateTime.utc(2026, 10, 6, 3, 10),
@@ -70,6 +71,7 @@ void main() {
         ChatMessage(
           id: 'm-2',
           localId: 'm-2',
+          conversationId: 'd732131d-b076-4eed-9492-535fbc4cd1c5',
           text: 'Ini dia paketnya',
           type: ChatMessageType.image,
           media: const ChatMedia(url: 'https://media.example.com/foto.jpg'),

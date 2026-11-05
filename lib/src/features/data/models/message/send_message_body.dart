@@ -9,6 +9,7 @@ part 'send_message_body.g.dart';
 /// - text: `{"type": "message", "body": "..."}`
 /// - media: `{"type": "message", "message_type": "image", "media_id": "...", "caption": "..."}`
 /// - location: `{"type": "location", "latitude": -6.2, "longitude": 106.8}`
+/// - button tap: `{"type": "button_reply", "button_id": "...", "button_title": "..."}`
 @JsonSerializable(includeIfNull: false)
 class SendMessageBody extends Equatable {
   @JsonKey(name: 'type')
@@ -25,6 +26,10 @@ class SendMessageBody extends Equatable {
   final double? latitude;
   @JsonKey(name: 'longitude')
   final double? longitude;
+  @JsonKey(name: 'button_id')
+  final String? buttonId;
+  @JsonKey(name: 'button_title')
+  final String? buttonTitle;
 
   const SendMessageBody({
     this.type = 'message',
@@ -34,6 +39,8 @@ class SendMessageBody extends Equatable {
     this.caption,
     this.latitude,
     this.longitude,
+    this.buttonId,
+    this.buttonTitle,
   });
 
   /// A media message; the file was uploaded first and got [mediaId].
@@ -41,24 +48,37 @@ class SendMessageBody extends Equatable {
     : type = 'message',
       body = null,
       latitude = null,
-      longitude = null;
+      longitude = null,
+      buttonId = null,
+      buttonTitle = null;
 
   const SendMessageBody.location({required double this.latitude, required double this.longitude})
     : type = 'location',
       body = null,
       messageType = null,
       mediaId = null,
-      caption = null;
+      caption = null,
+      buttonId = null,
+      buttonTitle = null;
+
+  const SendMessageBody.buttonReply({required String this.buttonId, required String this.buttonTitle})
+    : type = 'button_reply',
+      body = null,
+      messageType = null,
+      mediaId = null,
+      caption = null,
+      latitude = null,
+      longitude = null;
 
   factory SendMessageBody.fromJson(Map<String, dynamic> json) => _$SendMessageBodyFromJson(json);
 
   Map<String, dynamic> toJson() => _$SendMessageBodyToJson(this);
 
   @override
-  List<Object?> get props => [type, body, messageType, mediaId, caption, latitude, longitude];
+  List<Object?> get props => [type, body, messageType, mediaId, caption, latitude, longitude, buttonId, buttonTitle];
 
   @override
   String toString() {
-    return 'SendMessageBody{type: $type, body: $body, messageType: $messageType, mediaId: $mediaId, caption: $caption, latitude: $latitude, longitude: $longitude}';
+    return 'SendMessageBody{type: $type, body: $body, messageType: $messageType, mediaId: $mediaId, caption: $caption, latitude: $latitude, longitude: $longitude, buttonId: $buttonId, buttonTitle: $buttonTitle}';
   }
 }

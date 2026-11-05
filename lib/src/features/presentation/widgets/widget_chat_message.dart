@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_theme.dart';
 import 'package:nusa_chat/src/core/util/styles/spacing.dart';
+import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 
 /// An agent message: avatar, sender name and bubble.
 /// The visitor's own messages are a bare right-aligned bubble.
@@ -17,6 +18,9 @@ class NusaChatMessageRow extends StatelessWidget {
   /// Shown under a failed bubble, e.g. "Gagal terkirim. Ketuk untuk kirim ulang."
   final String? errorText;
 
+  /// Shown under an agent's bubble, e.g. [NusaChatMessageButtons].
+  final Widget? footer;
+
   const NusaChatMessageRow({
     super.key,
     required this.bubble,
@@ -25,6 +29,7 @@ class NusaChatMessageRow extends StatelessWidget {
     this.senderName,
     this.showSender = true,
     this.errorText,
+    this.footer,
   });
 
   static const _avatarSize = 36.0;
@@ -58,10 +63,68 @@ class NusaChatMessageRow extends StatelessWidget {
                 const SizedBox(height: BaseSpacing.xs),
               ],
               bubble,
+              if (footer != null) ...[const SizedBox(height: BaseSpacing.xs), footer!],
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The reply buttons of an agent message, stacked at the bubble's maximum
+/// width. Disabled, but still shown, when [onTap] is null.
+class NusaChatMessageButtons extends StatelessWidget {
+  final List<ChatButton> buttons;
+  final ValueChanged<ChatButton>? onTap;
+
+  const NusaChatMessageButtons({super.key, required this.buttons, this.onTap});
+
+  static const _minHeight = 44.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NusaChatThemeScope.of(context);
+    final borderRadius = BorderRadius.circular(BaseRadius.md);
+    final onTap = this.onTap;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: theme.bubbleMaxWidth),
+      child: Opacity(
+        opacity: onTap == null ? theme.messageButtonDisabledOpacity : 1,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (index, button) in buttons.indexed) ...[
+              if (index > 0) const SizedBox(height: BaseSpacing.xs),
+              DecoratedBox(
+                decoration: BoxDecoration(borderRadius: borderRadius, boxShadow: theme.agentBubbleShadow),
+                child: Material(
+                  color: theme.messageButtonColor,
+                  borderRadius: borderRadius,
+                  clipBehavior: Clip.antiAlias,
+                  child: Semantics(
+                    button: true,
+                    enabled: onTap != null,
+                    child: InkWell(
+                      onTap: onTap == null ? null : () => onTap(button),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: _minHeight),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: BaseSpacing.md, vertical: BaseSpacing.sm),
+                          child: Center(
+                            child: Text(button.title, textAlign: TextAlign.center, style: theme.messageButtonTextStyle),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

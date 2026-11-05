@@ -11,6 +11,7 @@ import 'package:nusa_chat/src/features/data/models/data_api_failure/data_api_fai
 import 'package:nusa_chat/src/features/data/models/message/send_message_body.dart';
 import 'package:nusa_chat/src/features/data/models/session/session_body.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
+import 'package:nusa_chat/src/features/domain/entities/chat_conversation.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_session.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
@@ -86,16 +87,75 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
-  Future<Either<Failure, List<ChatMessage>>> getMessages(ChatSession session, {DateTime? since}) async {
+  Future<Either<Failure, List<ChatMessage>>> getMessages(ChatSession session, {DateTime? since}) {
+    return _getMessages(session.conversationId, since: since);
+  }
+
+  @override
+  Future<Either<Failure, List<ChatMessage>>> getConversationMessages(String conversationId) {
+    return _getMessages(conversationId);
+  }
+
+  Future<Either<Failure, List<ChatMessage>>> _getMessages(String conversationId, {DateTime? since}) async {
     final isConnected = await networkInfo.isConnected;
     if (!isConnected) return Left(ConnectionFailure());
 
     try {
-      final response = await remoteDataSource.getMessages(session.conversationId, since: since);
+      final response = await remoteDataSource.getMessages(conversationId, since: since);
       final messages = (response.data ?? const [])
           .map((row) => row.toEntity(resolveMediaUrl: remoteDataSource.mediaUrl))
           .toList();
       return Right(messages);
+    } on DioException catch (error) {
+      return Left(_serverFailure(error));
+    } catch (error) {
+      return Left(ParsingFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<ChatMessage>>> getVisitorMessages({required int limit, DateTime? since}) async {
+    final visitorId = config.visitorId ?? await _readSavedVisitorId();
+    if (visitorId == null) return const Right([]);
+
+    final isConnected = await networkInfo.isConnected;
+    if (!isConnected) return Left(ConnectionFailure());
+
+    try {
+      final response = await remoteDataSource.getVisitorMessages(visitorId, limit: limit, since: since);
+      final messages = (response.data ?? const [])
+          .map((row) => row.toEntity(resolveMediaUrl: remoteDataSource.mediaUrl))
+          .toList();
+      return Right(messages);
+    } on DioException catch (error) {
+      return Left(_serverFailure(error));
+    } catch (error) {
+      return Left(ParsingFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ChatConversationPage>> getConversations({
+    required ChatConversationOrder order,
+    required int page,
+    required int limit,
+  }) async {
+    final visitorId = config.visitorId ?? await _readSavedVisitorId();
+    if (visitorId == null) {
+      return Right(ChatConversationPage(conversations: const [], page: page, limit: limit, total: 0, totalPages: 0));
+    }
+
+    final isConnected = await networkInfo.isConnected;
+    if (!isConnected) return Left(ConnectionFailure());
+
+    try {
+      final response = await remoteDataSource.getVisitorConversations(
+        visitorId,
+        order: order.name,
+        page: page,
+        limit: limit,
+      );
+      return Right(response.toEntity());
     } on DioException catch (error) {
       return Left(_serverFailure(error));
     } catch (error) {
@@ -137,6 +197,11 @@ class ChatRepositoryImpl implements ChatRepository {
   @override
   Future<Either<Failure, String?>> sendLocation(ChatSession session, ChatLocation location) {
     return _send(session, SendMessageBody.location(latitude: location.latitude, longitude: location.longitude));
+  }
+
+  @override
+  Future<Either<Failure, String?>> sendButtonReply(ChatSession session, ChatButton button) {
+    return _send(session, SendMessageBody.buttonReply(buttonId: button.id, buttonTitle: button.title));
   }
 
   @override
