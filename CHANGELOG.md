@@ -1,4 +1,4 @@
-## Unreleased
+## 0.6.0
 
 * Videos: "Video" in the attachment menu picks one video from the system photo picker (no permission needed). It is
   trimmed to at most 1 minute 30 seconds on `NusaChatVideoTrimPage`, compressed on the device (H.264, up to 720p and
