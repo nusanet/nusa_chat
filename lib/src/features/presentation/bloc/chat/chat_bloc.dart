@@ -213,7 +213,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final failed = state.messages[index];
     emit(state.copyWith(messages: [...state.messages]..removeAt(index)));
     switch (failed.type) {
-      case ChatMessageType.image || ChatMessageType.document || ChatMessageType.audio:
+      case ChatMessageType.image || ChatMessageType.video || ChatMessageType.document || ChatMessageType.audio:
         final media = failed.media;
         if (media?.localPath == null) return;
         await _sendAttachment(
@@ -224,6 +224,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             mimeType: media.mimeType ?? 'application/octet-stream',
             size: media.size ?? 0,
             duration: media.duration,
+            thumbnailPath: media.thumbnailPath,
             caption: failed.text,
           ),
           emit,
@@ -340,6 +341,14 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       ),
     );
     _onSent(emit, pending.localId, result.map((sent) => sent.messageId));
+    final isTooLarge = result.fold((failure) => failure is MediaTooLargeFailure, (_) => false);
+    if (isTooLarge && attachment.type == ChatMessageType.video && !emit.isDone) {
+      emit(
+        state.copyWith(
+          notice: ChatNotice(id: ++_noticeSequence, message: ConstantErrorMessage.videoTooLarge, isVideoTooLarge: true),
+        ),
+      );
+    }
   }
 
   FutureOr<void> _onChatLocationSubmitted(ChatLocationSubmitted event, Emitter<ChatState> emit) async {
@@ -464,6 +473,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     if (local.type != server.type) return false;
     return switch (local.type) {
       ChatMessageType.image ||
+      ChatMessageType.video ||
       ChatMessageType.document ||
       ChatMessageType.audio => local.media?.mediaId != null && local.media?.mediaId == server.media?.mediaId,
       ChatMessageType.location => local.location == server.location,

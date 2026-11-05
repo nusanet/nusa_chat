@@ -97,6 +97,43 @@ void main() {
       expect(result.fold((failure) => failure.message, (_) => ''), 'file kosong');
     });
 
+    Future<dynamic> rejected(int status, Object? data) async {
+      final options = RequestOptions(path: '/');
+      when(
+        mockRemote.uploadMedia(
+          path: anyNamed('path'),
+          fileName: anyNamed('fileName'),
+          mimeType: anyNamed('mimeType'),
+          onSendProgress: anyNamed('onSendProgress'),
+        ),
+      ).thenThrow(
+        DioException(
+          requestOptions: options,
+          response: Response(requestOptions: options, statusCode: status, data: data),
+        ),
+      );
+      final result = await repository.uploadMedia(tAttachment);
+      return result.fold((failure) => failure, (_) => null);
+    }
+
+    test('pastikan penolakan ukuran dari bridge menjadi MediaTooLargeFailure', () async {
+      final failure = await rejected(400, {
+        'error': 'ukuran file (17000000 bytes) melebihi batas 16777216 bytes untuk video',
+      });
+      expect(failure, isA<MediaTooLargeFailure>());
+      expect(failure.message, 'Ukuran file terlalu besar.');
+      expect(failure.toString(), 'MediaTooLargeFailure{}');
+    });
+
+    test('pastikan 413 dari proxy menjadi MediaTooLargeFailure', () async {
+      expect(await rejected(413, '<html>too large</html>'), isA<MediaTooLargeFailure>());
+    });
+
+    test('pastikan 400 lain tetap ServerFailure', () async {
+      expect(await rejected(400, '<html>bad</html>'), isA<ServerFailure>());
+      expect(await rejected(500, {'error': 'melebihi batas'}), isA<ServerFailure>());
+    });
+
     test('pastikan ConnectionFailure kalau offline', () async {
       when(mockNetworkInfo.isConnected).thenAnswer((_) async => false);
       expect(await repository.uploadMedia(tAttachment), Left(ConnectionFailure()));

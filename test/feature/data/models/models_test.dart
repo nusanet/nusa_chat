@@ -131,6 +131,22 @@ void main() {
       expect(message.text, 'Ini dia paketnya');
     });
 
+    test('video dari agent', () {
+      final event = SocketEventModel.fromJson({
+        'type': 'message',
+        'from': 'agent',
+        'message_type': 'video',
+        'media_url': 'https://media.example.com/a.mp4',
+        'caption': 'Cara pasangnya',
+        'message_id': 'm-5',
+      }).toEntity();
+
+      final message = (event as ChatSocketIncomingMessage).message;
+      expect(message.type, ChatMessageType.video);
+      expect(message.text, 'Cara pasangnya');
+      expect(message.media?.url, 'https://media.example.com/a.mp4');
+    });
+
     test('tipe tidak dikenal', () {
       expect(SocketEventModel.fromJson({'type': 'typing'}).toEntity(), isA<ChatSocketUnknown>());
     });

@@ -2,6 +2,7 @@
 library;
 
 export 'src/config/nusa_chat_config.dart';
+export 'src/core/service/nusa_chat_ios_plugin.dart';
 export 'src/core/service/media_service.dart';
 export 'src/core/theme/nusa_chat_strings.dart';
 export 'src/core/theme/nusa_chat_theme.dart';
@@ -13,6 +14,7 @@ export 'src/features/domain/entities/chat_message.dart';
 export 'src/features/domain/entities/chat_session.dart';
 export 'src/features/presentation/bloc/chat/chat_state.dart' show ChatConnectionStatus;
 export 'src/nusa_chat_client.dart';
+export 'src/core/util/video_trim.dart' show NusaChatTrimRange, NusaChatVideoSpec;
 export 'src/core/util/image_edit.dart' show NusaChatMark, NusaChatStrokeMark, NusaChatArrowMark, NusaChatTextMark;
 export 'src/features/presentation/pages/nusa_chat_camera_page.dart';
 export 'src/features/presentation/pages/nusa_chat_crop_page.dart' hide NusaChatCropBox;
@@ -20,6 +22,8 @@ export 'src/features/presentation/pages/nusa_chat_draw_page.dart';
 export 'src/features/presentation/pages/nusa_chat_image_viewer_page.dart';
 export 'src/features/presentation/pages/nusa_chat_media_preview_page.dart';
 export 'src/features/presentation/pages/nusa_chat_page.dart';
+export 'src/features/presentation/pages/nusa_chat_video_trim_page.dart';
+export 'src/features/presentation/pages/nusa_chat_video_viewer_page.dart';
 export 'src/features/presentation/widgets/widget_chat_app_bar.dart';
 export 'src/features/presentation/widgets/widget_chat_attachment_menu.dart';
 export 'src/features/presentation/widgets/widget_chat_avatar.dart';

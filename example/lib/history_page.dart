@@ -210,6 +210,17 @@ class _ConversationThreadPageState extends State<ConversationThreadPage> {
                   ),
                 ),
         );
+      case ChatMessageType.video:
+        return NusaChatVideoContent(
+          media: media,
+          onTap: media == null
+              ? null
+              : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => NusaChatVideoViewerPage(media: media, caption: message.text, strings: _strings),
+                  ),
+                ),
+        );
       case ChatMessageType.document:
         final url = media?.url;
         return NusaChatDocumentContent(

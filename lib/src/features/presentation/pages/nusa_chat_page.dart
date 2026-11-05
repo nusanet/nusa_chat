@@ -20,6 +20,8 @@ import 'package:nusa_chat/src/features/presentation/bloc/chat/bloc.dart';
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_camera_page.dart';
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_image_viewer_page.dart';
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_media_preview_page.dart';
+import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_video_trim_page.dart';
+import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_video_viewer_page.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_app_bar.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_attachment_menu.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_avatar.dart';
@@ -40,6 +42,10 @@ import 'package:url_launcher/url_launcher.dart';
 class NusaChatAttachmentOptions {
   /// Photos from the system photo picker — no permission needed.
   final bool gallery;
+
+  /// One video at a time from the system photo picker — no permission needed.
+  /// It is trimmed to 1 minute 30 seconds and compressed before it can be sent.
+  final bool video;
 
   /// The in-app camera — needs the camera permission.
   final bool camera;
@@ -62,6 +68,7 @@ class NusaChatAttachmentOptions {
 
   const NusaChatAttachmentOptions({
     this.gallery = true,
+    this.video = true,
     this.camera = true,
     this.document = true,
     this.location = true,
@@ -73,6 +80,7 @@ class NusaChatAttachmentOptions {
   /// Text only, as before media support.
   const NusaChatAttachmentOptions.none()
     : gallery = false,
+      video = false,
       camera = false,
       document = false,
       location = false,
@@ -82,6 +90,7 @@ class NusaChatAttachmentOptions {
 
   List<NusaChatAttachmentKind> get menuKinds => [
     if (gallery) NusaChatAttachmentKind.gallery,
+    if (video) NusaChatAttachmentKind.video,
     if (document) NusaChatAttachmentKind.document,
     if (location) NusaChatAttachmentKind.location,
   ];
@@ -155,7 +164,7 @@ typedef NusaChatConnectionBuilder = Widget Function(BuildContext context, ChatCo
 typedef NusaChatDateBuilder = Widget Function(BuildContext context, DateTime date, String label);
 
 /// The NusaChat screen: a chat with a NusaContact Socket Bridge agent —
-/// text, photos, documents, locations and voice notes.
+/// text, photos, videos, documents, locations and voice notes.
 ///
 /// Restyle it with [theme] and [strings]; swap parts with the builders. Each builder receives
 /// what the default widget would use, and [messageBuilder] also receives the
@@ -629,6 +638,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
         MediaHelper.formatSize(error.maxBytes ?? MediaHelper.maxImageBytes),
       ),
       NusaChatMediaError.failed => strings.locationFailed,
+      NusaChatMediaError.compressionFailed => strings.videoCompressFailed,
     });
   }
 
@@ -650,6 +660,8 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
     switch (kind) {
       case NusaChatAttachmentKind.gallery:
         await _pickGallery();
+      case NusaChatAttachmentKind.video:
+        await _pickVideo();
       case NusaChatAttachmentKind.document:
         await _pickDocument();
       case NusaChatAttachmentKind.location:
@@ -663,6 +675,18 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
     final images = await _guard(() => _media.pickImages(limit: widget.attachments.maxImages));
     if (images == null || images.isEmpty) return;
     await _preview(images, onAdd: (remaining) async => await _guard(() => _media.pickImages(limit: remaining)) ?? []);
+  }
+
+  /// Trimming and compressing happen on their own screen, so the preview only
+  /// ever gets a video that can be sent.
+  Future<void> _pickVideo() async {
+    final path = await _guard(_media.pickVideo);
+    if (path == null) return;
+    final video = await _push<ChatAttachment>(
+      NusaChatVideoTrimPage(path: path, mediaService: _media, strings: widget.strings),
+    );
+    unawaited(_media.discardVideo(path));
+    if (video != null) await _preview([video]);
   }
 
   Future<void> _pickDocument() async {
@@ -782,7 +806,10 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
         value: _bloc,
         child: BlocConsumer<ChatBloc, ChatState>(
           listenWhen: (previous, current) => current.notice != null && previous.notice != current.notice,
-          listener: (context, state) => _showNotice(context, state.notice!.message),
+          listener: (context, state) {
+            final notice = state.notice!;
+            _showNotice(context, notice.isVideoTooLarge ? widget.strings.videoTooLarge : notice.message);
+          },
           buildWhen: (previous, current) => previous.connection != current.connection,
           builder: (context, state) {
             return ValueListenableBuilder(
@@ -1086,6 +1113,21 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
           onTap: !interactive || media == null
               ? null
               : () => _push<void>(NusaChatImageViewerPage(media: media, caption: message.text, heroTag: heroTag)),
+        );
+      case ChatMessageType.video:
+        return NusaChatVideoContent(
+          media: media,
+          uploadProgress: message.uploadProgress,
+          onTap: !interactive || media == null
+              ? null
+              : () => _push<void>(
+                  NusaChatVideoViewerPage(
+                    media: media,
+                    caption: message.text,
+                    mediaService: _media,
+                    strings: widget.strings,
+                  ),
+                ),
         );
       case ChatMessageType.document:
         final url = media?.url;

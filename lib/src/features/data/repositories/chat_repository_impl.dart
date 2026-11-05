@@ -225,10 +225,19 @@ class ChatRepositoryImpl implements ChatRepository {
       );
       return Right(response.toEntity());
     } on DioException catch (error) {
-      return Left(_serverFailure(error));
+      return Left(_isTooLarge(error) ? MediaTooLargeFailure() : _serverFailure(error));
     } catch (error) {
       return Left(ParsingFailure(error.toString()));
     }
+  }
+
+  /// The bridge has no error code for this, only its message on a 400; a proxy
+  /// in front of it answers 413.
+  bool _isTooLarge(DioException error) {
+    final response = error.response;
+    if (response?.statusCode == 413) return true;
+    final data = response?.data;
+    return response?.statusCode == 400 && data is Map && '${data['error']}'.contains('melebihi batas');
   }
 
   @override

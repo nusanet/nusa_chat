@@ -37,6 +37,7 @@ class NusaChatStrings {
   /// Labels for media messages, used where only text fits (e.g. a custom
   /// bubble built from `NusaChatMessageData.displayText`).
   final String imageLabel;
+  final String videoLabel;
   final String documentLabel;
   final String audioLabel;
   final String locationLabel;
@@ -44,6 +45,8 @@ class NusaChatStrings {
 
   /// Attachment menu.
   final String attachGallery;
+
+  final String attachVideo;
 
   final String attachDocument;
 
@@ -146,6 +149,23 @@ class NusaChatStrings {
   /// Places the text being typed in the editor.
   final String done;
 
+  /// Video trim screen.
+  final String videoTrimTitle;
+
+  /// Goes on from the trim screen.
+  final String next;
+
+  /// `{max}` is replaced by the longest video that can be sent, e.g. `1:30`.
+  final String videoMaxDuration;
+
+  /// Shown while a video is being compressed.
+  final String compressingVideo;
+
+  final String videoCompressFailed;
+
+  /// A video over the limit, after compressing or from the bridge.
+  final String videoTooLarge;
+
   const NusaChatStrings({
     this.title = 'NusaChat',
     this.agentName = 'NusaSelecta',
@@ -162,11 +182,13 @@ class NusaChatStrings {
     this.copy = 'Salin',
     this.copied = 'Pesan disalin',
     this.imageLabel = '[Gambar]',
+    this.videoLabel = '[Video]',
     this.documentLabel = '[Dokumen]',
     this.audioLabel = '[Pesan suara]',
     this.locationLabel = '[Lokasi]',
     this.unsupportedLabel = '[Pesan tidak didukung]',
-    this.attachGallery = 'Galeri',
+    this.attachGallery = 'Foto',
+    this.attachVideo = 'Video',
     this.attachDocument = 'Dokumen',
     this.attachLocation = 'Lokasi',
     this.previewTitle = 'Kirim ke NusaSelecta',
@@ -214,21 +236,29 @@ class NusaChatStrings {
     this.editTitle = 'Edit',
     this.editFailed = 'Gambar tidak bisa disimpan. Coba lagi.',
     this.done = 'Selesai',
+    this.videoTrimTitle = 'Potong Video',
+    this.next = 'Lanjut',
+    this.videoMaxDuration = 'Maksimal {max}',
+    this.compressingVideo = 'Mengompres video...',
+    this.videoCompressFailed = 'Video tidak bisa diproses. Coba lagi.',
+    this.videoTooLarge = 'Video terlalu besar untuk dikirim. Coba potong agar lebih pendek.',
   });
 
   /// What a bubble shows for [message]: its text, or a label for non-text
   /// messages (followed by the caption when there is one).
   String displayText(ChatMessage message) {
     String withCaption(String label) {
-      final caption = message.type == ChatMessageType.image || message.type == ChatMessageType.audio
-          ? message.text.trim()
-          : '';
+      final caption = switch (message.type) {
+        ChatMessageType.image || ChatMessageType.video || ChatMessageType.audio => message.text.trim(),
+        _ => '',
+      };
       return caption.isEmpty ? label : '$label $caption';
     }
 
     return switch (message.type) {
       ChatMessageType.text || ChatMessageType.interactive => message.text,
       ChatMessageType.image => withCaption(imageLabel),
+      ChatMessageType.video => withCaption(videoLabel),
       ChatMessageType.audio => withCaption(audioLabel),
       ChatMessageType.document =>
         message.media?.fileName == null ? documentLabel : '$documentLabel ${message.media!.fileName}',
@@ -280,11 +310,13 @@ class NusaChatStrings {
     String? copy,
     String? copied,
     String? imageLabel,
+    String? videoLabel,
     String? documentLabel,
     String? audioLabel,
     String? locationLabel,
     String? unsupportedLabel,
     String? attachGallery,
+    String? attachVideo,
     String? attachDocument,
     String? attachLocation,
     String? previewTitle,
@@ -332,6 +364,12 @@ class NusaChatStrings {
     String? editTitle,
     String? editFailed,
     String? done,
+    String? videoTrimTitle,
+    String? next,
+    String? videoMaxDuration,
+    String? compressingVideo,
+    String? videoCompressFailed,
+    String? videoTooLarge,
   }) {
     return NusaChatStrings(
       title: title ?? this.title,
@@ -349,11 +387,13 @@ class NusaChatStrings {
       copy: copy ?? this.copy,
       copied: copied ?? this.copied,
       imageLabel: imageLabel ?? this.imageLabel,
+      videoLabel: videoLabel ?? this.videoLabel,
       documentLabel: documentLabel ?? this.documentLabel,
       audioLabel: audioLabel ?? this.audioLabel,
       locationLabel: locationLabel ?? this.locationLabel,
       unsupportedLabel: unsupportedLabel ?? this.unsupportedLabel,
       attachGallery: attachGallery ?? this.attachGallery,
+      attachVideo: attachVideo ?? this.attachVideo,
       attachDocument: attachDocument ?? this.attachDocument,
       attachLocation: attachLocation ?? this.attachLocation,
       previewTitle: previewTitle ?? this.previewTitle,
@@ -401,6 +441,12 @@ class NusaChatStrings {
       editTitle: editTitle ?? this.editTitle,
       editFailed: editFailed ?? this.editFailed,
       done: done ?? this.done,
+      videoTrimTitle: videoTrimTitle ?? this.videoTrimTitle,
+      next: next ?? this.next,
+      videoMaxDuration: videoMaxDuration ?? this.videoMaxDuration,
+      compressingVideo: compressingVideo ?? this.compressingVideo,
+      videoCompressFailed: videoCompressFailed ?? this.videoCompressFailed,
+      videoTooLarge: videoTooLarge ?? this.videoTooLarge,
     );
   }
 }

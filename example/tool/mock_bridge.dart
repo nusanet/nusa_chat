@@ -7,6 +7,8 @@
 //   POST /v1/widget/{website_id}/conversations/{conversation_id}/messages   (HTTP fallback)
 //   GET  /v1/widget/{website_id}/visitors/{visitor_id}/conversations[?order=&page=&limit=]
 //   GET  /v1/widget/{website_id}/visitors/{visitor_id}/messages[?limit=&since=]
+//   POST /v1/widget/{website_id}/media                                      (multipart; video/mp4 up to 16 MB, images...)
+//   GET  /v1/widget/{website_id}/media/{media_id}
 //   WS   /v1/ws?visitor_id=..&conversation_id=..                           (Origin checked)
 // plus a helper to play the agent:
 //   POST /agent/{visitor_id}   body: {"text": "..."}
@@ -19,6 +21,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 final _random = Random.secure();
 
@@ -47,6 +50,9 @@ late final bool _seed;
 final _conversations = <String, _Conversation>{}; // by conversation_id
 final _visitorConversation = <String, String>{}; // visitor_id -> conversation_id
 final _sockets = <String, WebSocket>{}; // visitor_id -> socket
+final _media = <String, ({String mimeType, List<int> bytes})>{}; // by media_id
+
+const _maxMediaBytes = 16 * 1024 * 1024;
 
 Future<void> main(List<String> args) async {
   String option(String name, String fallback) {
@@ -86,6 +92,20 @@ Future<void> _handle(HttpRequest request) async {
     return _json(request, ok ? 200 : 404, ok ? {'ok': true} : {'error': 'visitor tidak dikenal'});
   }
 
+  if (request.method == 'GET' &&
+      segments.length == 5 &&
+      segments[0] == 'v1' &&
+      segments[1] == 'widget' &&
+      segments[3] == 'media') {
+    final media = _media[segments[4]];
+    if (media == null) return _json(request, 404, {'error': 'media tidak ditemukan'});
+    request.response
+      ..headers.contentType = ContentType.parse(media.mimeType)
+      ..contentLength = media.bytes.length
+      ..add(media.bytes);
+    return request.response.close();
+  }
+
   if (segments.length >= 4 && segments[0] == 'v1' && segments[1] == 'widget') {
     if (request.headers.value('origin') != _allowedOrigin) {
       return _json(request, 403, {'error': 'origin tidak diizinkan'});
@@ -93,6 +113,7 @@ Future<void> _handle(HttpRequest request) async {
     if (request.method == 'POST' && segments.length == 4 && segments[3] == 'sessions') {
       return _createSession(request);
     }
+    if (request.method == 'POST' && segments.length == 4 && segments[3] == 'media') return _uploadMedia(request);
     if (request.method == 'GET' && segments.length == 6 && segments[3] == 'visitors') {
       final threads = _conversations.values.where((c) => c.visitorId == segments[4]).toList();
       if (threads.isEmpty) return _json(request, 404, {'error': 'visitor tidak ditemukan'});
@@ -117,6 +138,38 @@ Future<void> _handle(HttpRequest request) async {
     }
   }
   return _json(request, 404, {'error': 'not found'});
+}
+
+/// `POST .../media`: takes the multipart `file` part as the bridge would.
+Future<void> _uploadMedia(HttpRequest request) async {
+  final boundary = request.headers.contentType?.parameters['boundary'];
+  if (boundary == null) return _json(request, 400, {'error': 'field file wajib diisi'});
+  final body = await request.fold<BytesBuilder>(BytesBuilder(copy: false), (all, chunk) => all..add(chunk));
+  final bytes = body.takeBytes();
+  // Latin-1 keeps one character per byte, so offsets stay valid for the binary body.
+  final text = latin1.decode(bytes);
+  final partStart = text.indexOf('--$boundary');
+  final headersEnd = text.indexOf('\r\n\r\n', partStart);
+  final partEnd = text.indexOf('\r\n--$boundary', headersEnd);
+  if (partStart < 0 || headersEnd < 0 || partEnd < 0) return _json(request, 400, {'error': 'multipart rusak'});
+  final mimeType = RegExp(
+    r'content-type: *([^\r\n]+)',
+    caseSensitive: false,
+  ).firstMatch(text.substring(partStart, headersEnd))?.group(1)?.trim();
+  final category = switch (mimeType?.split('/').first) {
+    'image' => 'image',
+    'audio' => 'audio',
+    'video' when mimeType == 'video/mp4' => 'video',
+    'application' => 'document',
+    _ => null,
+  };
+  if (category == null) return _json(request, 400, {'error': 'tipe file "$mimeType" tidak didukung'});
+  final file = bytes.sublist(headersEnd + 4, partEnd);
+  if (file.length > _maxMediaBytes) return _json(request, 400, {'error': 'ukuran file melebihi batas'});
+  final mediaId = _hex(24);
+  _media[mediaId] = (mimeType: mimeType!, bytes: file);
+  stdout.writeln('media    $mediaId $mimeType ${file.length} bytes');
+  return _json(request, 200, {'media_id': mediaId, 'message_type': category});
 }
 
 Future<void> _listConversations(HttpRequest request, List<_Conversation> threads) {
@@ -243,7 +296,10 @@ Future<void> _handleSocket(HttpRequest request) async {
         socket.add(jsonEncode({'type': 'error', 'error': 'tipe pesan tidak didukung mock'}));
         return;
       }
-      final saved = _saveVisitorMessage(conversation, json['body']?.toString() ?? '');
+      final mediaId = json['media_id']?.toString();
+      final saved = mediaId == null
+          ? _saveVisitorMessage(conversation, json['body']?.toString() ?? '')
+          : _saveVisitorMedia(conversation, json['message_type'].toString(), mediaId, json['caption']?.toString() ?? '');
       socket.add(jsonEncode({'type': 'ack', 'message_id': saved['message_id']}));
     },
     onDone: () {
@@ -261,6 +317,14 @@ Map<String, dynamic> _saveVisitorMessage(_Conversation conversation, String text
       _agentReply(conversation.visitorId, 'Terima kasih, pesan "$text" sudah kami terima. Mohon ditunggu ya.');
     });
   }
+  return row;
+}
+
+Map<String, dynamic> _saveVisitorMedia(_Conversation conversation, String type, String mediaId, String caption) {
+  final row = _row(conversation, 'inbound', caption, DateTime.now())
+    ..['type'] = type
+    ..['media_url'] = mediaId;
+  conversation.messages.add(row);
   return row;
 }
 

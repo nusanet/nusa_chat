@@ -63,6 +63,18 @@ class ConnectionFailure extends Failure {
   }
 }
 
+/// The bridge (or a proxy in front of it) refused an upload for its size.
+class MediaTooLargeFailure extends Failure {
+  @override
+  String get message => ConstantErrorMessage.mediaTooLarge;
+
+  @override
+  List<Object> get props => [];
+
+  @override
+  String toString() => 'MediaTooLargeFailure{}';
+}
+
 class ParsingFailure extends Failure {
   final String errorMessage;
 

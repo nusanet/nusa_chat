@@ -6,6 +6,7 @@ Bridge over REST and WebSocket.
 ## Features
 
 - Real-time text chat with history, optimistic sending, retry, HTTP fallback and automatic reconnect.
+- Videos from the gallery: trimmed to 1 minute 30 seconds and compressed on the device to under 15 MB before sending. A video that already fits is sent as it is on Android.
 - Photos from the gallery or an in-app camera, with crop (free, 1:1, 4:5, 16:9, rotate) and drawing
   (pencil, text, arrow) before sending.
 - Documents (PDF, Word, Excel), current location and voice notes.
@@ -108,7 +109,9 @@ Each attachment needs its permission in the host app; turn off what you don't us
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 ```
 
-Photos use the system photo picker, so no storage permission is needed.
+Photos and videos use the system photo picker, so no storage permission is needed.
+
+Android needs `minSdk` 24 for video compression.
 
 **iOS** (`Info.plist`): `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`,
 `NSLocationWhenInUseUsageDescription`, and `NSPhotoLibraryUsageDescription` (iOS 13 only).
@@ -116,7 +119,10 @@ Photos use the system photo picker, so no storage permission is needed.
 ### Server requirement
 
 `origin` must be registered in `allowed_origins` of the `websites` row for `websiteId` — otherwise the
-session call returns `403` and the socket is closed with `1008`. No other backend change is needed.
+session call returns `403` and the socket is closed with `1008`.
+
+Videos also need the bridge to accept `video/mp4` uploads up to 16 MB and `video` messages. Until it does, turn them off
+with `NusaChatAttachmentOptions(video: false)`; otherwise the upload fails and the bubble offers a retry.
 
 ## Customization
 

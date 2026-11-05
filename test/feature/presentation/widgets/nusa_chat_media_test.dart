@@ -1,3 +1,5 @@
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+import '../../../helper/fake_video_player.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -43,6 +45,8 @@ class FakeMediaService implements NusaChatMediaService {
   /// What [imageFromPath] returns per path: an attachment, or an error to throw.
   Map<String, Object> fromPath = {};
   final recorder = FakeRecorder();
+  String? pickedVideo;
+  final discarded = <String>[];
 
   @override
   Future<List<ChatAttachment>> pickImages({required int limit}) async => images;
@@ -63,6 +67,41 @@ class FakeMediaService implements NusaChatMediaService {
 
   @override
   NusaChatVoiceRecorder createRecorder() => recorder;
+
+  @override
+  Future<String?> pickVideo() async => pickedVideo;
+
+  @override
+  Future<NusaChatVideoInfo> videoInfo(String path) async =>
+      const NusaChatVideoInfo(duration: Duration(minutes: 2), width: 1920, height: 1080);
+
+  @override
+  Future<List<String>> videoThumbnails(String path, List<Duration> positions) async => const [];
+
+  @override
+  Future<ChatAttachment?> compressVideo(
+    String path, {
+    required NusaChatVideoInfo info,
+    required Duration start,
+    required Duration end,
+    void Function(double progress)? onProgress,
+  }) async => ChatAttachment(
+    type: ChatMessageType.video,
+    path: path,
+    fileName: 'out.mp4',
+    mimeType: 'video/mp4',
+    size: 1024,
+    duration: end - start,
+  );
+
+  @override
+  Future<void> cancelVideoCompression() async {}
+
+  @override
+  Future<void> discardVideo(String path) async => discarded.add(path);
+
+  @override
+  Future<String> downloadVideo(String url, {void Function(double progress)? onProgress}) async => url;
 }
 
 void main() {
@@ -136,6 +175,101 @@ void main() {
 
   Finder sendButtonWithIcon(String icon) => find.byWidgetPredicate((w) => w is NusaChatSendButton && w.icon == icon);
 
+  testWidgets('pastikan video dipilih dari menu, dipotong, dikompres lalu terkirim', (tester) async {
+    final directory = Directory.systemTemp.createTempSync();
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final picked = File('${directory.path}/in.mp4')..writeAsBytesSync([0]);
+    VideoPlayerPlatform.instance = FakeVideoPlayer();
+    media.pickedVideo = picked.path;
+    await pump(tester);
+
+    await tester.tap(find.byTooltip('Lampiran'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Video'));
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Potong Video'), findsOneWidget);
+
+    await tester.tap(find.text('Lanjut'));
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(media.discarded, [picked.path]);
+    expect(find.text('Kirim ke NusaSelecta'), findsOneWidget);
+    expect(find.textContaining('1:30 ·'), findsOneWidget);
+
+    await tester.tap(find.byType(NusaChatSendButton));
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final uploaded = verify(mockRepository.uploadMedia(captureAny, onProgress: anyNamed('onProgress'))).captured.single;
+    expect((uploaded as ChatAttachment).type, ChatMessageType.video);
+    expect(find.byType(NusaChatVideoContent), findsOneWidget);
+    expect(find.text('1:30'), findsOneWidget);
+  });
+
+  testWidgets('pastikan video yang ditolak bridge karena ukuran menyarankan video lebih pendek', (tester) async {
+    const custom = 'Pendekkan videonya';
+    final bloc = buildBloc();
+    when(
+      mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')),
+    ).thenAnswer((_) async => Left(MediaTooLargeFailure()));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NusaChatPage(
+          config: tConfig,
+          bloc: bloc,
+          mediaService: media,
+          strings: const NusaChatStrings(videoTooLarge: custom),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    socket.add(const ChatSocketOpened());
+    await tester.pump();
+
+    bloc.add(
+      const ChatAttachmentsSubmitted(
+        attachments: [
+          ChatAttachment(
+            type: ChatMessageType.video,
+            path: '/tmp/a.mp4',
+            fileName: 'a.mp4',
+            mimeType: 'video/mp4',
+            size: 1,
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text(custom), findsOneWidget);
+  });
+
+  testWidgets('pastikan batal memilih video tidak membuka apa pun', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byTooltip('Lampiran'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Video'));
+    await tester.pumpAndSettle();
+    expect(find.text('Potong Video'), findsNothing);
+  });
+
+  testWidgets('pastikan opsi video bisa dimatikan', (tester) async {
+    await pump(tester, attachments: const NusaChatAttachmentOptions(video: false));
+    await tester.tap(find.byTooltip('Lampiran'));
+    await tester.pumpAndSettle();
+    expect(find.text('Video'), findsNothing);
+  });
+
   testWidgets('pastikan mic dan kamera tampil saat kosong, tombol kirim saat mengetik', (tester) async {
     await pump(tester);
 
@@ -159,13 +293,13 @@ void main() {
     expect(sendButtonWithIcon(BaseIcons.microphone), findsNothing);
   });
 
-  testWidgets('pastikan menu lampiran berisi Galeri, Dokumen, Lokasi', (tester) async {
+  testWidgets('pastikan menu lampiran berisi Foto, Dokumen, Lokasi', (tester) async {
     await pump(tester);
 
     await tester.tap(find.byTooltip('Lampiran'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Galeri'), findsOneWidget);
+    expect(find.text('Foto'), findsOneWidget);
     expect(find.text('Dokumen'), findsOneWidget);
     expect(find.text('Lokasi'), findsOneWidget);
   });
@@ -176,7 +310,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Lampiran'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Galeri'));
+    await tester.tap(find.text('Foto'));
     await tester.pumpAndSettle();
 
     expect(find.text('Kirim ke NusaSelecta'), findsOneWidget);
@@ -206,7 +340,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Lampiran'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Galeri'));
+    await tester.tap(find.text('Foto'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Hapus'));
     await tester.pumpAndSettle();

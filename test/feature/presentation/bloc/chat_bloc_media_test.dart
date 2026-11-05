@@ -124,6 +124,55 @@ void main() {
     await bloc.close();
   });
 
+  group('video terlalu besar', () {
+    const tVideo = ChatAttachment(
+      type: ChatMessageType.video,
+      path: '/tmp/a.mp4',
+      fileName: 'a.mp4',
+      mimeType: 'video/mp4',
+      size: 1,
+    );
+
+    setUp(() {
+      when(
+        mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')),
+      ).thenAnswer((_) async => Left(MediaTooLargeFailure()));
+    });
+
+    test('pastikan video yang ditolak ukurannya memunculkan saran', () async {
+      final bloc = await started();
+      bloc.add(const ChatAttachmentsSubmitted(attachments: [tVideo]));
+      final state = await bloc.stream.firstWhere((s) => s.notice != null);
+
+      expect(state.messages.single.status, ChatMessageStatus.failed);
+      expect(state.notice!.isVideoTooLarge, isTrue);
+      expect(state.notice!.message, 'Video terlalu besar untuk dikirim. Coba potong agar lebih pendek.');
+      await bloc.close();
+    });
+
+    test('pastikan file lain yang ditolak ukurannya tidak memunculkan saran video', () async {
+      final bloc = await started();
+      bloc.add(const ChatAttachmentsSubmitted(attachments: [tPhoto]));
+      final state = await bloc.stream.firstWhere((s) => s.messages.single.status == ChatMessageStatus.failed);
+
+      expect(state.notice, isNull);
+      expect(state.messages.single.error, 'Ukuran file terlalu besar.');
+      await bloc.close();
+    });
+
+    test('pastikan video yang gagal karena hal lain tidak memunculkan saran', () async {
+      when(
+        mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')),
+      ).thenAnswer((_) async => Left(ConnectionFailure()));
+      final bloc = await started();
+      bloc.add(const ChatAttachmentsSubmitted(attachments: [tVideo]));
+      final state = await bloc.stream.firstWhere((s) => s.messages.single.status == ChatMessageStatus.failed);
+
+      expect(state.notice, isNull);
+      await bloc.close();
+    });
+  });
+
   test('pastikan upload gagal bisa dikirim ulang tanpa memilih ulang', () async {
     when(
       mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')),
@@ -197,6 +246,44 @@ void main() {
     expect(state.messages.map((m) => m.media?.fileName), ['a.jpg', 'b.jpg']);
     final sent = verify(mockRepository.sendMedia(tSession, captureAny, caption: anyNamed('caption'))).captured;
     expect(sent.map((m) => (m as UploadedMedia).mediaId), ['a.jpg', 'b.jpg']);
+    await bloc.close();
+  });
+
+  test('pastikan video gagal bisa dikirim ulang dengan thumbnail dan durasinya', () async {
+    const video = ChatAttachment(
+      type: ChatMessageType.video,
+      path: '/tmp/v.mp4',
+      fileName: 'v.mp4',
+      mimeType: 'video/mp4',
+      size: 10,
+      duration: Duration(seconds: 30),
+      thumbnailPath: '/tmp/v.jpg',
+      caption: 'Lihat',
+    );
+    when(
+      mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')),
+    ).thenAnswer((_) async => Left(ConnectionFailure()));
+    final bloc = await started();
+
+    bloc.add(const ChatAttachmentsSubmitted(attachments: [video]));
+    final failed = await bloc.stream.firstWhere(
+      (s) => s.messages.length == 1 && s.messages.single.status == ChatMessageStatus.failed,
+    );
+    expect(failed.messages.single.type, ChatMessageType.video);
+
+    final firstTry = failed.messages.single.localId;
+    bloc.add(ChatMessageRetried(localId: firstTry));
+    final retried = await bloc.stream.firstWhere(
+      (s) =>
+          s.messages.length == 1 &&
+          s.messages.single.localId != firstTry &&
+          s.messages.single.status == ChatMessageStatus.failed,
+    );
+    expect(retried.messages.single.media?.thumbnailPath, '/tmp/v.jpg');
+    expect(retried.messages.single.media?.duration, const Duration(seconds: 30));
+
+    final uploads = verify(mockRepository.uploadMedia(captureAny, onProgress: anyNamed('onProgress'))).captured;
+    expect(uploads.last, video);
     await bloc.close();
   });
 

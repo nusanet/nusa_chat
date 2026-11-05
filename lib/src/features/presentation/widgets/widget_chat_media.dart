@@ -78,6 +78,99 @@ class NusaChatImageContent extends StatelessWidget {
   }
 }
 
+/// A video inside a bubble: the same frame as a photo, with a play button and
+/// its length. Only a video sent from this device has a picture; history does
+/// not carry one, so others show a placeholder until they are played.
+class NusaChatVideoContent extends StatelessWidget {
+  final ChatMedia? media;
+  final double? uploadProgress;
+  final VoidCallback? onTap;
+
+  const NusaChatVideoContent({super.key, required this.media, this.uploadProgress, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NusaChatThemeScope.of(context);
+    final thumbnail = media?.thumbnailPath;
+    final duration = media?.duration;
+    final placeholder = SizedBox(
+      height: 160,
+      width: double.infinity,
+      child: Center(
+        child: WidgetSvgIcon(BaseIcons.video, size: 32, color: theme.agentAvatarIconColor.withValues(alpha: 0.8)),
+      ),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(BaseRadius.md),
+      child: ColoredBox(
+        color: theme.mediaPlaceholderColor,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 120, maxHeight: 300),
+          child: GestureDetector(
+            onTap: uploadProgress == null ? onTap : null,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (thumbnail == null)
+                  placeholder
+                else
+                  Image.file(
+                    File(thumbnail),
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) => placeholder,
+                  ),
+                if (uploadProgress != null)
+                  Positioned.fill(
+                    child: ColoredBox(
+                      color: const Color(0x66000000),
+                      child: Center(child: _UploadRing(progress: uploadProgress!)),
+                    ),
+                  )
+                else
+                  const NusaChatVideoPlayBadge(),
+                if (duration != null)
+                  Positioned(
+                    left: BaseSpacing.sm,
+                    bottom: BaseSpacing.sm,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: BaseSpacing.sm, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0x99000000),
+                        borderRadius: BorderRadius.circular(BaseRadius.full),
+                      ),
+                      child: Text(
+                        MediaHelper.formatDuration(duration),
+                        style: theme.agentTimeStyle.copyWith(color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The round play button over a video that is not playing.
+class NusaChatVideoPlayBadge extends StatelessWidget {
+  const NusaChatVideoPlayBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: const BoxDecoration(color: Color(0x99000000), shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: const WidgetSvgIcon(BaseIcons.play, size: 24, color: Colors.white),
+    );
+  }
+}
+
 class _UploadRing extends StatelessWidget {
   final double progress;
 

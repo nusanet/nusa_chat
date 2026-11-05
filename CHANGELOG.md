@@ -1,3 +1,28 @@
+## Unreleased
+
+* Videos: "Video" in the attachment menu picks one video from the system photo picker (no permission needed). It is
+  trimmed to at most 1 minute 30 seconds on `NusaChatVideoTrimPage`, compressed on the device (H.264, up to 720p and
+  30 fps, so the longest clip stays under 15 MB), then captioned and sent. On Android a whole video that already is
+  H.264/AAC MP4, up to 720p and under the limit, is sent as it is, and the plugin's own encoder uses a constant bitrate,
+  because Android raises a low variable bitrate to a quality floor. A video refused for its size, here or by the bridge,
+  shows `NusaChatStrings.videoTooLarge`, which suggests a shorter video. Bubbles show `NusaChatVideoContent`; a tap
+  opens `NusaChatVideoViewerPage`. Turn it off with `NusaChatAttachmentOptions(video: false)`. Needs a bridge that
+  accepts `video/mp4` uploads and `video` messages.
+* `ChatMessageType.video`, `ChatMedia.thumbnailPath`, `ChatAttachment.thumbnailPath`, `NusaChatTrimRange`,
+  `NusaChatVideoSpec`, `NusaChatVideoInfo`, `NusaChatMediaError.compressionFailed`.
+* `MediaTooLargeFailure` for an upload the bridge refuses for its size.
+* The attachment menu's "Galeri" is now "Foto", since it only picks photos. `NusaChatStrings.attachGallery` keeps its
+  name.
+
+**Breaking / visible changes**
+
+* `ChatMessageType` has a new value, so an exhaustive `switch` on it in a host app must handle `video`.
+* `NusaChatAttachmentKind` and `NusaChatMediaError` have new values (`video`, `compressionFailed`).
+* `NusaChatTheme`'s constructor has a new required parameter, `videoIconColor`.
+* `NusaChatMediaService` has new methods (`pickVideo`, `videoInfo`, `videoThumbnails`, `compressVideo`,
+  `cancelVideoCompression`, `discardVideo`, `downloadVideo`) that a custom implementation must add.
+* Android apps need `minSdk` 24. nusa_chat now has native Android code (`NusaChatPlugin`) that uses Media3 1.9.2.
+
 ## 0.5.0
 
 * `NusaChatClient.getConversations()`: a page of the visitor's conversations, including closed ones

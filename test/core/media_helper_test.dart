@@ -7,6 +7,7 @@ void main() {
     expect(MediaHelper.mimeTypeOf('/tmp/IMG_1.JPG'), 'image/jpeg');
     expect(MediaHelper.mimeTypeOf('laporan.xlsx'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     expect(MediaHelper.mimeTypeOf('voice.ogg'), 'audio/ogg');
+    expect(MediaHelper.mimeTypeOf('klip.mp4'), 'video/mp4');
     expect(MediaHelper.mimeTypeOf('animasi.gif'), isNull);
     expect(MediaHelper.mimeTypeOf('tanpa-ekstensi'), isNull);
   });
@@ -14,6 +15,7 @@ void main() {
   test('pastikan tipe pesan dari MIME', () {
     expect(MediaHelper.typeOfMime('image/png'), ChatMessageType.image);
     expect(MediaHelper.typeOfMime('audio/mp4'), ChatMessageType.audio);
+    expect(MediaHelper.typeOfMime('video/mp4'), ChatMessageType.video);
     expect(MediaHelper.typeOfMime('application/pdf'), ChatMessageType.document);
     expect(MediaHelper.typeOfMime('application/zip'), isNull);
   });
@@ -21,6 +23,8 @@ void main() {
   test('pastikan batas ukuran per tipe', () {
     expect(MediaHelper.maxBytesOf(ChatMessageType.image), 5 * 1024 * 1024);
     expect(MediaHelper.maxBytesOf(ChatMessageType.document), 16 * 1024 * 1024);
+    expect(MediaHelper.maxBytesOf(ChatMessageType.video), 15 * 1024 * 1024);
+    expect(MediaHelper.maxVideoDuration, const Duration(minutes: 1, seconds: 30));
   });
 
   test('pastikan format ukuran dan durasi', () {

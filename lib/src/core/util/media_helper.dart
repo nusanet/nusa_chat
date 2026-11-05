@@ -8,6 +8,10 @@ class MediaHelper {
   static const maxImageBytes = 5 * 1024 * 1024;
   static const maxDocumentBytes = 16 * 1024 * 1024;
   static const maxAudioBytes = 16 * 1024 * 1024;
+  static const maxVideoBytes = 15 * 1024 * 1024;
+
+  /// The longest video that can be sent; a longer one has to be trimmed first.
+  static const maxVideoDuration = Duration(seconds: 90);
 
   /// Document extensions offered by the file picker.
   static const documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx'];
@@ -28,6 +32,7 @@ class MediaHelper {
     'mp3': 'audio/mpeg',
     'm4a': 'audio/mp4',
     'aac': 'audio/aac',
+    'mp4': 'video/mp4',
   };
 
   static String? extensionOf(String path) {
@@ -43,6 +48,7 @@ class MediaHelper {
   static ChatMessageType? typeOfMime(String mimeType) {
     if (mimeType.startsWith('image/')) return ChatMessageType.image;
     if (mimeType.startsWith('audio/')) return ChatMessageType.audio;
+    if (mimeType.startsWith('video/')) return ChatMessageType.video;
     if (_mimeByExtension.values.contains(mimeType)) return ChatMessageType.document;
     return null;
   }
@@ -51,6 +57,7 @@ class MediaHelper {
     return switch (type) {
       ChatMessageType.image => maxImageBytes,
       ChatMessageType.audio => maxAudioBytes,
+      ChatMessageType.video => maxVideoBytes,
       _ => maxDocumentBytes,
     };
   }

@@ -83,6 +83,7 @@ class NusaChatTheme {
 
   /// Attachment menu: icon and its tinted disc.
   final Color galleryIconColor;
+  final Color videoIconColor;
   final Color documentIconColor;
   final Color locationIconColor;
 
@@ -172,6 +173,7 @@ class NusaChatTheme {
     required this.mediaPlaceholderColor,
     required this.recordingColor,
     required this.galleryIconColor,
+    required this.videoIconColor,
     required this.documentIconColor,
     required this.locationIconColor,
     required this.editorColors,
@@ -241,6 +243,7 @@ class NusaChatTheme {
       mediaPlaceholderColor: BasePalette.blue200,
       recordingColor: BasePalette.red600,
       galleryIconColor: BasePalette.emerald600,
+      videoIconColor: const Color(0xFF7C3AED),
       documentIconColor: BasePalette.orange500,
       locationIconColor: BasePalette.blue600,
       dateChipColor: BaseColor.surfaceDefault,
@@ -322,6 +325,7 @@ class NusaChatTheme {
     Color? mediaPlaceholderColor,
     Color? recordingColor,
     Color? galleryIconColor,
+    Color? videoIconColor,
     Color? documentIconColor,
     Color? locationIconColor,
     List<Color>? editorColors,
@@ -381,6 +385,7 @@ class NusaChatTheme {
       mediaPlaceholderColor: mediaPlaceholderColor ?? this.mediaPlaceholderColor,
       recordingColor: recordingColor ?? this.recordingColor,
       galleryIconColor: galleryIconColor ?? this.galleryIconColor,
+      videoIconColor: videoIconColor ?? this.videoIconColor,
       documentIconColor: documentIconColor ?? this.documentIconColor,
       locationIconColor: locationIconColor ?? this.locationIconColor,
       editorColors: editorColors ?? this.editorColors,

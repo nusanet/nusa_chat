@@ -10,6 +10,8 @@ import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_crop_page.dart';
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_draw_page.dart';
+import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_video_viewer_page.dart';
+import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_media.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_send_button.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_svg_icon.dart';
 
@@ -183,7 +185,7 @@ class _NusaChatMediaPreviewPageState extends State<NusaChatMediaPreviewPage> {
                 },
                 itemBuilder: (context, index) => Padding(
                   padding: const EdgeInsets.symmetric(horizontal: BaseSpacing.lg, vertical: BaseSpacing.xl),
-                  child: _PreviewItem(attachment: _items[index], pager: _pagerOf(index)),
+                  child: _PreviewItem(attachment: _items[index], pager: _pagerOf(index), strings: widget.strings),
                 ),
               ),
             ),
@@ -261,8 +263,9 @@ class _NusaChatMediaPreviewPageState extends State<NusaChatMediaPreviewPage> {
 class _PreviewItem extends StatelessWidget {
   final ChatAttachment attachment;
   final String? pager;
+  final NusaChatStrings strings;
 
-  const _PreviewItem({required this.attachment, this.pager});
+  const _PreviewItem({required this.attachment, required this.strings, this.pager});
 
   @override
   Widget build(BuildContext context) {
@@ -273,6 +276,8 @@ class _PreviewItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(BaseRadius.md),
         child: Image.file(File(attachment.path), fit: BoxFit.contain),
       );
+    } else if (attachment.type == ChatMessageType.video) {
+      content = _VideoPreview(attachment: attachment, strings: strings);
     } else {
       final extension = (MediaHelper.extensionOf(attachment.fileName) ?? '').toUpperCase();
       content = Center(
@@ -327,6 +332,62 @@ class _PreviewItem extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// A compressed video about to be sent: a frame to tap and play, with the
+/// length and size that will be sent.
+class _VideoPreview extends StatelessWidget {
+  final ChatAttachment attachment;
+  final NusaChatStrings strings;
+
+  const _VideoPreview({required this.attachment, required this.strings});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NusaChatThemeScope.of(context);
+    final thumbnail = attachment.thumbnailPath;
+    final duration = attachment.duration;
+    return GestureDetector(
+      key: const ValueKey('nusa_chat.preview_video'),
+      onTap: () => Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => NusaChatVideoViewerPage(media: attachment.toMedia(), strings: strings),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(BaseRadius.md),
+        child: Stack(
+          fit: StackFit.expand,
+          alignment: Alignment.center,
+          children: [
+            if (thumbnail == null)
+              ColoredBox(color: theme.previewSurfaceColor)
+            else
+              Image.file(File(thumbnail), fit: BoxFit.contain),
+            const Center(child: NusaChatVideoPlayBadge()),
+            Positioned(
+              right: BaseSpacing.md,
+              bottom: BaseSpacing.md,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: BaseSpacing.sm, vertical: 2),
+                decoration: BoxDecoration(
+                  color: theme.previewBackgroundColor.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(BaseRadius.full),
+                ),
+                child: Text(
+                  [
+                    if (duration != null) MediaHelper.formatDuration(duration),
+                    MediaHelper.formatSize(attachment.size),
+                  ].join(' · '),
+                  style: theme.previewTextStyle.copyWith(fontSize: 10),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -389,6 +450,8 @@ class _Thumbnail extends StatelessWidget {
           borderRadius: BorderRadius.circular(BaseRadius.sm),
           child: attachment.type == ChatMessageType.image
               ? Image.file(File(attachment.path), fit: BoxFit.cover, cacheWidth: 160)
+              : attachment.thumbnailPath != null
+              ? Image.file(File(attachment.thumbnailPath!), fit: BoxFit.cover, cacheWidth: 160)
               : _FileTile(extension: (MediaHelper.extensionOf(attachment.fileName) ?? '').toUpperCase(), size: 48),
         ),
       ),

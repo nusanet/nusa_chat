@@ -3,7 +3,8 @@ import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 
 /// A file picked or recorded on this device, about to be sent.
 class ChatAttachment extends Equatable {
-  /// [ChatMessageType.image], [ChatMessageType.document] or [ChatMessageType.audio].
+  /// [ChatMessageType.image], [ChatMessageType.video], [ChatMessageType.document]
+  /// or [ChatMessageType.audio].
   final ChatMessageType type;
   final String path;
   final String fileName;
@@ -12,10 +13,13 @@ class ChatAttachment extends Equatable {
   final String mimeType;
   final int size;
 
-  /// Length of a voice note.
+  /// Length of a voice note or video.
   final Duration? duration;
 
-  /// Shown under an image or document.
+  /// A frame of a video, shown until it is played.
+  final String? thumbnailPath;
+
+  /// Shown under an image, video or document.
   final String caption;
 
   const ChatAttachment({
@@ -25,6 +29,7 @@ class ChatAttachment extends Equatable {
     required this.mimeType,
     required this.size,
     this.duration,
+    this.thumbnailPath,
     this.caption = '',
   });
 
@@ -36,20 +41,28 @@ class ChatAttachment extends Equatable {
       mimeType: mimeType,
       size: size,
       duration: duration,
+      thumbnailPath: thumbnailPath,
       caption: caption ?? this.caption,
     );
   }
 
   ChatMedia toMedia() {
-    return ChatMedia(localPath: path, fileName: fileName, mimeType: mimeType, size: size, duration: duration);
+    return ChatMedia(
+      localPath: path,
+      fileName: fileName,
+      mimeType: mimeType,
+      size: size,
+      duration: duration,
+      thumbnailPath: thumbnailPath,
+    );
   }
 
   @override
-  List<Object?> get props => [type, path, fileName, mimeType, size, duration, caption];
+  List<Object?> get props => [type, path, fileName, mimeType, size, duration, thumbnailPath, caption];
 
   @override
   String toString() {
-    return 'ChatAttachment{type: $type, path: $path, fileName: $fileName, mimeType: $mimeType, size: $size, duration: $duration, caption: $caption}';
+    return 'ChatAttachment{type: $type, path: $path, fileName: $fileName, mimeType: $mimeType, size: $size, duration: $duration, thumbnailPath: $thumbnailPath, caption: $caption}';
   }
 }
 
@@ -57,7 +70,7 @@ class ChatAttachment extends Equatable {
 class UploadedMedia extends Equatable {
   final String mediaId;
 
-  /// `image`, `document` or `audio`, as decided by the bridge from the MIME type.
+  /// `image`, `video`, `document` or `audio`, as decided by the bridge from the MIME type.
   final String messageType;
 
   const UploadedMedia({required this.mediaId, required this.messageType});

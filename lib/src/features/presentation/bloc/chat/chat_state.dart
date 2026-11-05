@@ -11,10 +11,13 @@ class ChatNotice extends Equatable {
   final int id;
   final String message;
 
-  const ChatNotice({required this.id, required this.message});
+  /// The bridge refused a video for its size; shortening it is what helps.
+  final bool isVideoTooLarge;
+
+  const ChatNotice({required this.id, required this.message, this.isVideoTooLarge = false});
 
   @override
-  List<Object?> get props => [id, message];
+  List<Object?> get props => [id, message, isVideoTooLarge];
 }
 
 class ChatState extends Equatable {

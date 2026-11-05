@@ -7,7 +7,7 @@ import 'package:nusa_chat/src/core/util/styles/spacing.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_svg_icon.dart';
 
 /// What the composer's "+" offers.
-enum NusaChatAttachmentKind { gallery, document, location }
+enum NusaChatAttachmentKind { gallery, video, document, location }
 
 /// Opens the attachment menu: a white card above the
 /// composer, over a dimmed chat, listing [kinds] with tinted icon discs.
@@ -112,18 +112,21 @@ class NusaChatAttachmentMenu extends StatelessWidget {
 
   String _icon(NusaChatAttachmentKind kind) => switch (kind) {
     NusaChatAttachmentKind.gallery => BaseIcons.photo,
+    NusaChatAttachmentKind.video => BaseIcons.video,
     NusaChatAttachmentKind.document => BaseIcons.file,
     NusaChatAttachmentKind.location => BaseIcons.mapPin,
   };
 
   Color _color(NusaChatTheme theme, NusaChatAttachmentKind kind) => switch (kind) {
     NusaChatAttachmentKind.gallery => theme.galleryIconColor,
+    NusaChatAttachmentKind.video => theme.videoIconColor,
     NusaChatAttachmentKind.document => theme.documentIconColor,
     NusaChatAttachmentKind.location => theme.locationIconColor,
   };
 
   String _label(NusaChatAttachmentKind kind) => switch (kind) {
     NusaChatAttachmentKind.gallery => strings.attachGallery,
+    NusaChatAttachmentKind.video => strings.attachVideo,
     NusaChatAttachmentKind.document => strings.attachDocument,
     NusaChatAttachmentKind.location => strings.attachLocation,
   };

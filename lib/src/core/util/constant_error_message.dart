@@ -5,5 +5,7 @@ class ConstantErrorMessage {
   static const failureServer = 'Terjadi kesalahan pada server. Silakan coba lagi.';
   static const failureParsing = 'Respons server tidak dikenali.';
   static const failureSocket = 'Koneksi chat terputus.';
+  static const mediaTooLarge = 'Ukuran file terlalu besar.';
+  static const videoTooLarge = 'Video terlalu besar untuk dikirim. Coba potong agar lebih pendek.';
   static const rateLimited = 'Terlalu banyak pesan. Tunggu sebentar lalu coba lagi.';
 }

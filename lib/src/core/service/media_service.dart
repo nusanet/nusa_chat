@@ -1,13 +1,19 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_compress/flutter_compress.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_picker_android/image_picker_android.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+import 'package:nusa_chat/src/core/service/nusa_chat_video_encoder.dart';
 import 'package:nusa_chat/src/core/util/media_helper.dart';
+import 'package:nusa_chat/src/core/util/video_trim.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,6 +33,9 @@ enum NusaChatMediaError {
   tooLarge,
 
   failed,
+
+  /// A video could not be compressed.
+  compressionFailed,
 }
 
 class NusaChatMediaException implements Exception {
@@ -49,6 +58,20 @@ class NusaChatPosition {
   const NusaChatPosition({required this.location, required this.accuracy});
 }
 
+/// What a video file holds.
+class NusaChatVideoInfo {
+  final Duration duration;
+
+  /// As the platform reports it, which is also what its encoder scales from.
+  final int width;
+  final int height;
+
+  /// Bits per second, when known.
+  final int? bitrate;
+
+  const NusaChatVideoInfo({required this.duration, required this.width, required this.height, this.bitrate});
+}
+
 /// Device access the composer needs. Replaceable (e.g. in tests) through
 /// `NusaChatPage.mediaService`.
 ///
@@ -65,6 +88,40 @@ abstract class NusaChatMediaService {
 
   /// Validates a photo taken with the in-app camera.
   Future<ChatAttachment> imageFromPath(String path);
+
+  /// The path of a video from the system photo picker; null when the user
+  /// cancels. It still has to be trimmed and compressed with [compressVideo].
+  Future<String?> pickVideo();
+
+  /// Throws [NusaChatMediaException] for a file that cannot be read as a video.
+  Future<NusaChatVideoInfo> videoInfo(String path);
+
+  /// One image file per position, in order; for the trim timeline.
+  Future<List<String>> videoThumbnails(String path, List<Duration> positions);
+
+  /// Encodes the part of the video from [start] to [end] (see
+  /// [NusaChatVideoSpec]) into a file the bridge accepts.
+  ///
+  /// [onProgress] goes from 0 to 1. Null when cancelled with
+  /// [cancelVideoCompression]. Throws [NusaChatMediaException] when it fails
+  /// or the result is still over the bridge's limit.
+  Future<ChatAttachment?> compressVideo(
+    String path, {
+    required NusaChatVideoInfo info,
+    required Duration start,
+    required Duration end,
+    void Function(double progress)? onProgress,
+  });
+
+  Future<void> cancelVideoCompression();
+
+  /// Deletes the temporary copy [pickVideo] made, once it is not needed.
+  Future<void> discardVideo(String path);
+
+  /// Saves the video at [url] on this device and returns the file, for playing.
+  /// The bridge's media endpoint has no byte ranges, which iOS players need to
+  /// stream, so a video is always played from a file.
+  Future<String> downloadVideo(String url, {void Function(double progress)? onProgress});
 
   Future<NusaChatPosition> currentPosition();
 
@@ -87,8 +144,14 @@ abstract class NusaChatVoiceRecorder {
 
 class NusaChatMediaServiceImpl implements NusaChatMediaService {
   final ImagePicker _imagePicker;
+  final Dio _dio;
+  final NusaChatVideoEncoder _encoder;
+  CancellationToken? _compression;
 
-  NusaChatMediaServiceImpl({ImagePicker? imagePicker}) : _imagePicker = imagePicker ?? ImagePicker() {
+  NusaChatMediaServiceImpl({ImagePicker? imagePicker, Dio? dio, NusaChatVideoEncoder? encoder})
+    : _imagePicker = imagePicker ?? ImagePicker(),
+      _dio = dio ?? Dio(),
+      _encoder = encoder ?? const NusaChatVideoEncoder() {
     final platform = ImagePickerPlatform.instance;
     // The system Photo Picker (backported to older Android by Play services)
     // instead of the legacy document chooser.
@@ -124,6 +187,223 @@ class NusaChatMediaServiceImpl implements NusaChatMediaService {
   @override
   Future<ChatAttachment> imageFromPath(String path) async {
     return _attachment(path, expected: ChatMessageType.image);
+  }
+
+  @override
+  Future<String?> pickVideo() async {
+    final file = await _imagePicker.pickVideo(source: ImageSource.gallery);
+    return file?.path;
+  }
+
+  @override
+  Future<NusaChatVideoInfo> videoInfo(String path) async {
+    final VideoInfo info;
+    try {
+      info = await FlutterCompress.instance.getVideoInfo(path);
+    } on CompressException {
+      throw const NusaChatMediaException(NusaChatMediaError.unsupported);
+    } on PlatformException {
+      throw const NusaChatMediaException(NusaChatMediaError.unsupported);
+    }
+    if (info.durationMs <= 0 || info.width <= 0 || info.height <= 0) {
+      throw const NusaChatMediaException(NusaChatMediaError.unsupported);
+    }
+    return NusaChatVideoInfo(
+      duration: Duration(milliseconds: info.durationMs),
+      width: info.width,
+      height: info.height,
+      bitrate: info.bitrateKbps <= 0 ? null : info.bitrateKbps * 1000,
+    );
+  }
+
+  @override
+  Future<List<String>> videoThumbnails(String path, List<Duration> positions) async {
+    return [
+      for (final position in positions)
+        await FlutterCompress.instance.getThumbnail(
+          path,
+          positionMs: position.inMilliseconds,
+          quality: 40,
+          maxWidth: 120,
+        ),
+    ];
+  }
+
+  @override
+  Future<ChatAttachment?> compressVideo(
+    String path, {
+    required NusaChatVideoInfo info,
+    required Duration start,
+    required Duration end,
+    void Function(double progress)? onProgress,
+  }) async {
+    final directory = await getTemporaryDirectory();
+    final name = 'nusa_chat_video_${DateTime.now().millisecondsSinceEpoch}';
+    final String? outputPath;
+    try {
+      if (await _canSendAsIs(path, info: info, start: start, end: end)) {
+        // A copy, because the picked file is discarded once this screen closes.
+        outputPath = (await File(path).copy('${directory.path}/$name.mp4')).path;
+      } else if (_encodesNatively) {
+        outputPath = await _encodeNatively(path, '${directory.path}/$name.mp4', info, start, end, onProgress);
+      } else {
+        outputPath = await _compress(path, directory.path, name, info, start, end, onProgress);
+      }
+    } on CompressException {
+      throw const NusaChatMediaException(NusaChatMediaError.compressionFailed);
+    } on PlatformException {
+      throw const NusaChatMediaException(NusaChatMediaError.compressionFailed);
+    }
+    if (outputPath == null) return null;
+
+    final output = File(outputPath);
+    final size = await output.length();
+    if (size > MediaHelper.maxVideoBytes) {
+      await output.delete();
+      throw const NusaChatMediaException(NusaChatMediaError.tooLarge, maxBytes: MediaHelper.maxVideoBytes);
+    }
+    return ChatAttachment(
+      type: ChatMessageType.video,
+      path: output.path,
+      fileName: output.path.split('/').last,
+      mimeType: 'video/mp4',
+      size: size,
+      duration: end - start,
+      thumbnailPath: await _videoThumbnail(output.path),
+    );
+  }
+
+  bool get _encodesNatively => defaultTargetPlatform == TargetPlatform.android;
+
+  /// Encoding again only loses quality when the whole video already is what the
+  /// bridge can send. Only Android can read a file's tracks; elsewhere it is
+  /// always encoded.
+  Future<bool> _canSendAsIs(
+    String path, {
+    required NusaChatVideoInfo info,
+    required Duration start,
+    required Duration end,
+  }) async {
+    if (!_encodesNatively || start > Duration.zero || end < info.duration) return false;
+    if (info.duration > MediaHelper.maxVideoDuration) return false;
+    if (math.min(info.width, info.height) > NusaChatVideoSpec.maxShortSide) return false;
+    if (math.max(info.width, info.height) > NusaChatVideoSpec.maxLongSide) return false;
+    if (MediaHelper.mimeTypeOf(path) != 'video/mp4') return false;
+    if (await File(path).length() > MediaHelper.maxVideoBytes) return false;
+    final tracks = await _encoder.tracks(path);
+    return tracks.video == 'video/avc' && (tracks.audio == null || tracks.audio == 'audio/mp4a-latm');
+  }
+
+  Future<String?> _encodeNatively(
+    String path,
+    String output,
+    NusaChatVideoInfo info,
+    Duration start,
+    Duration end,
+    void Function(double progress)? onProgress,
+  ) async {
+    final spec = NusaChatVideoSpec.forSource(width: info.width, height: info.height, sourceBitrate: info.bitrate);
+    final finished = await _encoder.encode(
+      path: path,
+      output: output,
+      maxShortSide: NusaChatVideoSpec.maxShortSide,
+      maxLongSide: NusaChatVideoSpec.maxLongSide,
+      videoBitrate: (spec.videoBitrateMbps * 1000000).round(),
+      maxFps: NusaChatVideoSpec.maxFps,
+      start: start,
+      end: end,
+      onProgress: onProgress,
+    );
+    return finished ? output : null;
+  }
+
+  Future<String?> _compress(
+    String path,
+    String directory,
+    String name,
+    NusaChatVideoInfo info,
+    Duration start,
+    Duration end,
+    void Function(double progress)? onProgress,
+  ) async {
+    final spec = NusaChatVideoSpec.forSource(width: info.width, height: info.height, sourceBitrate: info.bitrate);
+    final token = _compression = CancellationToken();
+    try {
+      final result = await FlutterCompress.instance.compress(
+        path,
+        VideoCompressConfig(
+          codec: VideoCodec.h264,
+          container: VideoContainer.mp4,
+          videoBitrateKbps: (spec.videoBitrateMbps * 1000).round(),
+          audioBitrateKbps: NusaChatVideoSpec.audioBitrate ~/ 1000,
+          maxWidth: spec.width,
+          maxHeight: spec.height,
+          frameRate: NusaChatVideoSpec.maxFps.toDouble(),
+          trim: TrimRange(startMs: start.inMilliseconds, endMs: end.inMilliseconds),
+          // The original is the untrimmed video, never an acceptable result.
+          keepOriginalIfLarger: false,
+        ),
+        onProgress: (progress) => onProgress?.call(progress.progress),
+        cancellationToken: token,
+        outputDirectory: directory,
+        outputName: name,
+      );
+      return result.outputPath;
+    } on VideoCompressCancelledException {
+      return null;
+    } finally {
+      _compression = null;
+    }
+  }
+
+  /// A video without a thumbnail still sends, with the placeholder in its bubble.
+  Future<String?> _videoThumbnail(String path) async {
+    try {
+      return await FlutterCompress.instance.getThumbnail(path, quality: 70, maxWidth: 720);
+    } on CompressException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> cancelVideoCompression() async {
+    if (_encodesNatively) {
+      await _encoder.cancel();
+    } else {
+      _compression?.cancel();
+    }
+  }
+
+  @override
+  Future<void> discardVideo(String path) async {
+    final directory = await getTemporaryDirectory();
+    // Only ever a copy made for us, never a file of the user's.
+    if (!path.startsWith(directory.path)) return;
+    final file = File(path);
+    if (await file.exists()) await file.delete();
+  }
+
+  @override
+  Future<String> downloadVideo(String url, {void Function(double progress)? onProgress}) async {
+    final directory = await getTemporaryDirectory();
+    final target = File('${directory.path}/nusa_chat_video_${url.hashCode.toUnsigned(32).toRadixString(16)}.mp4');
+    if (await target.exists()) return target.path;
+    final partial = '${target.path}.part';
+    try {
+      await _dio.download(
+        url,
+        partial,
+        onReceiveProgress: (received, total) {
+          if (total > 0) onProgress?.call(received / total);
+        },
+      );
+    } on DioException {
+      throw const NusaChatMediaException(NusaChatMediaError.failed);
+    }
+    await File(partial).rename(target.path);
+    return target.path;
   }
 
   @override

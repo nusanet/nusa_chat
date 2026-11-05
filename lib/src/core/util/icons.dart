@@ -14,6 +14,7 @@ class BaseIcons {
   static const alertCircle = '$_path/alert-circle.svg';
   static const plus = '$_path/plus.svg';
   static const photo = '$_path/photo.svg';
+  static const video = '$_path/video.svg';
   static const file = '$_path/file.svg';
   static const fileText = '$_path/file-text.svg';
   static const mapPin = '$_path/map-pin.svg';

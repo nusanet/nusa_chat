@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 enum ChatMessageType {
   text,
   image,
+  video,
   document,
   audio,
   location,
@@ -30,7 +31,7 @@ enum ChatMessageStatus {
   failed,
 }
 
-/// The file of an image, document or voice note message.
+/// The file of an image, video, document or voice note message.
 class ChatMedia extends Equatable {
   /// Where the file can be fetched: the bridge's media endpoint for the
   /// visitor's uploads, or the agent's direct link. Null until uploaded.
@@ -49,10 +50,22 @@ class ChatMedia extends Equatable {
   /// Bytes, when known (local files only; history does not carry it).
   final int? size;
 
-  /// Length of a voice note, when known.
+  /// Length of a voice note or video, when known.
   final Duration? duration;
 
-  const ChatMedia({this.url, this.localPath, this.mediaId, this.fileName, this.mimeType, this.size, this.duration});
+  /// A frame of a video sent from this device; history does not carry one.
+  final String? thumbnailPath;
+
+  const ChatMedia({
+    this.url,
+    this.localPath,
+    this.mediaId,
+    this.fileName,
+    this.mimeType,
+    this.size,
+    this.duration,
+    this.thumbnailPath,
+  });
 
   /// Lower-case extension of [fileName] (or of [localPath]/[url]), e.g. `pdf`.
   String? get extension {
@@ -75,15 +88,16 @@ class ChatMedia extends Equatable {
       mimeType: mimeType,
       size: size,
       duration: duration,
+      thumbnailPath: thumbnailPath,
     );
   }
 
   @override
-  List<Object?> get props => [url, localPath, mediaId, fileName, mimeType, size, duration];
+  List<Object?> get props => [url, localPath, mediaId, fileName, mimeType, size, duration, thumbnailPath];
 
   @override
   String toString() {
-    return 'ChatMedia{url: $url, localPath: $localPath, mediaId: $mediaId, fileName: $fileName, mimeType: $mimeType, size: $size, duration: $duration}';
+    return 'ChatMedia{url: $url, localPath: $localPath, mediaId: $mediaId, fileName: $fileName, mimeType: $mimeType, size: $size, duration: $duration, thumbnailPath: $thumbnailPath}';
   }
 }
 
@@ -134,7 +148,7 @@ class ChatMessage extends Equatable {
   final String text;
   final ChatMessageType type;
 
-  /// The file of an image, document or audio message.
+  /// The file of an image, video, document or audio message.
   final ChatMedia? media;
 
   /// The point of a location message.
