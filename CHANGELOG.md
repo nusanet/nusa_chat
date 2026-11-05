@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.0
 
 * `NusaChatClient.getConversations()`: a page of the visitor's conversations, including closed ones
   (`ChatConversationPage`, `ChatConversation`).
