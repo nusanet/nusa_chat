@@ -1,5 +1,5 @@
 name: nusa_chat
-description: "In-app customer chat for Flutter (Android, iOS) over NusaContact Socket Bridge: text, photos with crop and drawing, documents, location, voice notes and emoji."
+description: "In-app customer chat for Flutter (Android, iOS, web) over NusaContact Socket Bridge: text, photos with crop and drawing, documents, location, voice notes and emoji."
 version: 0.5.0
 repository: https://github.com/nusanet/nusa_chat
 issue_tracker: https://github.com/nusanet/nusa_chat/issues
@@ -13,14 +13,19 @@ environment:
   sdk: ^3.8.1
   flutter: ">=3.32.0"
 
-# Mobile only — the WebSocket client is dart:io (IOWebSocketChannel) so it can send the Origin header.
+# On Android and iOS the WebSocket client is dart:io (IOWebSocketChannel) so it can send the Origin header;
+# on the web the browser sends the page's origin.
 platforms:
   android:
   ios:
+  web:
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # Cross-platform file abstraction: reads a picked file by path on mobile or by blob URL on the web.
+  cross_file: ^0.3.5
 
   # Pure Dart image codecs, used to save a cropped or edited photo as JPEG.
   image: ^4.10.1

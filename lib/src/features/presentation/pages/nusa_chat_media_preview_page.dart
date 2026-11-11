@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_strings.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_theme.dart';
 import 'package:nusa_chat/src/core/util/icons.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/core/util/media_helper.dart';
 import 'package:nusa_chat/src/core/util/styles/spacing.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
@@ -271,7 +270,7 @@ class _PreviewItem extends StatelessWidget {
     if (attachment.type == ChatMessageType.image) {
       content = ClipRRect(
         borderRadius: BorderRadius.circular(BaseRadius.md),
-        child: Image.file(File(attachment.path), fit: BoxFit.contain),
+        child: Image(image: NusaChatLocalFile.image(attachment.path), fit: BoxFit.contain),
       );
     } else {
       final extension = (MediaHelper.extensionOf(attachment.fileName) ?? '').toUpperCase();
@@ -388,7 +387,10 @@ class _Thumbnail extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(BaseRadius.sm),
           child: attachment.type == ChatMessageType.image
-              ? Image.file(File(attachment.path), fit: BoxFit.cover, cacheWidth: 160)
+              ? Image(
+                  image: ResizeImage.resizeIfNeeded(160, null, NusaChatLocalFile.image(attachment.path)),
+                  fit: BoxFit.cover,
+                )
               : _FileTile(extension: (MediaHelper.extensionOf(attachment.fileName) ?? '').toUpperCase(), size: 48),
         ),
       ),

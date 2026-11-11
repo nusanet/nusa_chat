@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_theme.dart';
 import 'package:nusa_chat/src/core/util/icons.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/core/util/media_helper.dart';
 import 'package:nusa_chat/src/core/util/styles/spacing.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
@@ -14,7 +14,7 @@ import 'package:nusa_chat/src/features/presentation/widgets/widget_svg_icon.dart
 /// this device), otherwise its URL. Null when neither is available.
 ImageProvider? nusaChatImageProvider(ChatMedia? media) {
   final localPath = media?.localPath;
-  if (localPath != null && File(localPath).existsSync()) return FileImage(File(localPath));
+  if (localPath != null && NusaChatLocalFile.exists(localPath)) return NusaChatLocalFile.image(localPath);
   final url = media?.url;
   if (url != null && url.isNotEmpty) return NetworkImage(url);
   return null;
@@ -444,8 +444,9 @@ class _NusaChatAudioContentState extends State<NusaChatAudioContent> {
     final localPath = widget.media?.localPath;
     final url = widget.media?.url;
     try {
-      if (localPath != null && File(localPath).existsSync()) {
-        await player.setFilePath(localPath);
+      if (localPath != null && NusaChatLocalFile.exists(localPath)) {
+        // A blob URL on the web.
+        await (NusaChatLocalFile.isWeb ? player.setUrl(localPath) : player.setFilePath(localPath));
       } else if (url != null) {
         await player.setUrl(url);
       } else {

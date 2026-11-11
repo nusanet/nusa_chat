@@ -1,6 +1,6 @@
 # nusa_chat
 
-In-app customer chat ("NusaChat") for Flutter apps on **Android and iOS**, connected to a NusaContact Socket
+In-app customer chat ("NusaChat") for Flutter apps on **Android, iOS and the web**, connected to a NusaContact Socket
 Bridge over REST and WebSocket.
 
 ## Features
@@ -113,10 +113,17 @@ Photos use the system photo picker, so no storage permission is needed.
 **iOS** (`Info.plist`): `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`,
 `NSLocationWhenInUseUsageDescription`, and `NSPhotoLibraryUsageDescription` (iOS 13 only).
 
+**Web**: the camera, microphone and location prompts come from the browser, which allows them only on
+`https://` (or `localhost`).
+
 ### Server requirement
 
 `origin` must be registered in `allowed_origins` of the `websites` row for `websiteId` — otherwise the
 session call returns `403` and the socket is closed with `1008`. No other backend change is needed.
+
+On the **web** the browser sends the page's own origin and `origin` is not used, so the origin of the page that
+hosts the app (e.g. `https://app.example.com`) must be in `allowed_origins` instead, and the bridge must answer
+its CORS preflight for the REST calls.
 
 ## Customization
 
@@ -143,7 +150,7 @@ They read colours from `NusaChatThemeScope.of(context)`.
 ## Behaviour
 
 - Bootstrap `POST /v1/widget/{website_id}/sessions` → history `GET …/messages` → WebSocket `/v1/ws` with an explicit
-  `Origin` header.
+  `Origin` header (on the web, the browser's).
 - Sent messages appear immediately (clock icon) and turn to a double check once the server saves them (`ack`). Acks carry no client
   id, so they are matched to pending messages in send order.
 - `rate_limited` / errors mark the message failed — tap to resend.

@@ -40,6 +40,30 @@ class MediaHelper {
   /// MIME type from the file extension, or null when the bridge would not take it.
   static String? mimeTypeOf(String path) => _mimeByExtension[extensionOf(path)];
 
+  /// JPEG, PNG or WebP from the file's first bytes, for a file without a name.
+  static String? imageMimeOfBytes(List<int> bytes) {
+    bool startsWith(List<int> magic, [int offset = 0]) {
+      if (bytes.length < offset + magic.length) return false;
+      for (var i = 0; i < magic.length; i++) {
+        if (bytes[offset + i] != magic[i]) return false;
+      }
+      return true;
+    }
+
+    if (startsWith(const [0xFF, 0xD8, 0xFF])) return 'image/jpeg';
+    if (startsWith(const [0x89, 0x50, 0x4E, 0x47])) return 'image/png';
+    if (startsWith('RIFF'.codeUnits) && startsWith('WEBP'.codeUnits, 8)) return 'image/webp';
+    return null;
+  }
+
+  /// The extension used for [mimeType], e.g. `jpg` for `image/jpeg`.
+  static String? extensionOfMime(String mimeType) {
+    for (final entry in _mimeByExtension.entries) {
+      if (entry.value == mimeType) return entry.key;
+    }
+    return null;
+  }
+
   static ChatMessageType? typeOfMime(String mimeType) {
     if (mimeType.startsWith('image/')) return ChatMessageType.image;
     if (mimeType.startsWith('audio/')) return ChatMessageType.audio;

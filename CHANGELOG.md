@@ -1,3 +1,13 @@
+## 0.5.1
+
+* Web support. The chat, history, photos (gallery and in-app camera), photo crop and drawing, documents, voice
+  notes and location work in the browser. Picked and edited files are kept as blob URLs and uploaded from memory.
+* On the web the browser sends the page's own `Origin` on the REST calls and the WebSocket upgrade, so
+  `NusaChatConfig.origin` is not sent there. The host page's origin must be in the website's `allowed_origins`,
+  and the bridge must allow it for CORS.
+* Voice notes on the web are Opus in WebM (`audio/webm`; Chrome, Firefox) or AAC in MP4 (`audio/mp4`; Safari).
+* The in-app camera no longer closes when the camera has no zoom, torch or focus point (most webcams).
+
 ## 0.5.0
 
 * `NusaChatClient.getConversations()`: a page of the visitor's conversations, including closed ones

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:nusa_chat/src/config/nusa_chat_config.dart';
 import 'package:nusa_chat/src/core/service/network_info.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/features/data/data_sources/chat_local_data_source.dart';
 import 'package:nusa_chat/src/features/data/data_sources/chat_remote_data_source.dart';
 import 'package:nusa_chat/src/features/data/data_sources/chat_socket_data_source.dart';
@@ -78,12 +79,13 @@ class NusaChatInjector {
 
     // Core
     sl.registerLazySingleton<NetworkInfo>(() => networkInfo ?? NetworkInfoImpl(Connectivity()));
-    sl.registerLazySingleton<Dio>(() => dio ?? _buildDio(config));
+    sl.registerLazySingleton<Dio>(() => dio ?? buildDio(config));
 
     return NusaChatInjector._(sl);
   }
 
-  static Dio _buildDio(NusaChatConfig config) {
+  @visibleForTesting
+  static Dio buildDio(NusaChatConfig config) {
     final dio = Dio(
       BaseOptions(
         baseUrl: config.normalizedBaseUrl,
@@ -91,7 +93,8 @@ class NusaChatInjector {
         receiveTimeout: const Duration(seconds: 30),
         contentType: Headers.jsonContentType,
         // Mobile has no page origin; the bridge checks it against allowed_origins.
-        headers: {'Origin': config.origin},
+        // A browser refuses to set it and sends the page's own origin.
+        headers: {if (!NusaChatLocalFile.isWeb) 'Origin': config.origin},
       ),
     );
     if (config.enableLog && kDebugMode) {
