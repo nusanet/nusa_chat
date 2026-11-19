@@ -123,6 +123,40 @@ void main() {
       verify(mockRemote.createSession(const SessionBody(visitorId: 'v1', fcmToken: 'fcm-1')));
     });
 
+    test('pastikan client_version dari host ikut dikirim', () async {
+      repository = build(
+        const NusaChatConfig(
+          baseUrl: 'https://x',
+          websiteId: 'mynusa',
+          origin: 'o',
+          visitorId: 'v1',
+          clientVersion: ' 2.1.0 ',
+        ),
+      );
+      when(mockRemote.createSession(any)).thenAnswer((_) async => tSessionResponse);
+
+      await repository.startSession();
+
+      verify(mockRemote.createSession(const SessionBody(visitorId: 'v1', clientVersion: '2.1.0')));
+    });
+
+    test('pastikan client_version yang tidak valid tidak dikirim', () async {
+      repository = build(
+        const NusaChatConfig(
+          baseUrl: 'https://x',
+          websiteId: 'mynusa',
+          origin: 'o',
+          visitorId: 'v1',
+          clientVersion: '2.1.0-beta',
+        ),
+      );
+      when(mockRemote.createSession(any)).thenAnswer((_) async => tSessionResponse);
+
+      await repository.startSession();
+
+      verify(mockRemote.createSession(const SessionBody(visitorId: 'v1')));
+    });
+
     test('pastikan visitor_id tersimpan yang ditolak (400) diganti baru', () async {
       when(mockLocal.getVisitorId('mynusa')).thenAnswer((_) async => 'bad');
       when(

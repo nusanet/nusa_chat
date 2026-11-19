@@ -44,6 +44,20 @@ start (the bridge has to store it to push agent replies):
 NusaChatConfig(..., fcmToken: await FirebaseMessaging.instance.getToken())
 ```
 
+### Naila assistant (`client_version`)
+
+The bridge hands a chat to the Naila assistant only when the session is opened with a `client_version` at least
+the `min_client_version` configured for the website (currently `2.0.0` for MyNusa and NusaSelecta). Naila answers
+with a "Hubungi Helpdesk" button; tapping it passes the chat to an agent. Without a version, or with a lower one,
+the visitor gets the old flow: a greeting, then an agent.
+
+```dart
+NusaChatConfig(..., clientVersion: (await PackageInfo.fromPlatform()).version) // e.g. "2.1.0"
+```
+
+Only dotted digits are sent (`2`, `2.1.0`, up to four parts, at most 20 characters); a build suffix such as
+`2.1.0+15` or `2.1.0-beta` is dropped rather than sent, since the bridge would refuse the session.
+
 ### Active session in your own views
 
 ```dart

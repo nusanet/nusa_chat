@@ -1,3 +1,9 @@
+## 0.5.2
+
+* `NusaChatConfig.clientVersion`: the host app's version, sent as `client_version` when the session starts. The
+  bridge hands the chat to the Naila assistant only from the website's `min_client_version` (`2.0.0` for MyNusa and
+  NusaSelecta). Values that are not dotted digits are not sent.
+
 ## 0.5.1
 
 * Web support. The chat, history, photos (gallery and in-app camera), photo crop and drawing, documents, voice

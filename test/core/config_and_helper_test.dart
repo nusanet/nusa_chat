@@ -27,6 +27,27 @@ void main() {
     });
   });
 
+  group('NusaChatConfig.validClientVersion', () {
+    NusaChatConfig config(String? version) =>
+        NusaChatConfig(baseUrl: 'https://x', websiteId: 'w', origin: 'o', clientVersion: version);
+
+    test('pastikan versi bertitik diterima dan di-trim', () {
+      expect(config('2').validClientVersion, '2');
+      expect(config('2.1.0').validClientVersion, '2.1.0');
+      expect(config(' 2.1.0.15 ').validClientVersion, '2.1.0.15');
+    });
+
+    test('pastikan versi yang ditolak bridge dibuang', () {
+      expect(config(null).validClientVersion, isNull);
+      expect(config('').validClientVersion, isNull);
+      expect(config('v2.1.0').validClientVersion, isNull);
+      expect(config('2.1.0-beta').validClientVersion, isNull);
+      expect(config('2.1.0+15').validClientVersion, isNull);
+      expect(config('1.2.3.4.5').validClientVersion, isNull);
+      expect(config('12345678901.123456789').validClientVersion, isNull);
+    });
+  });
+
   group('DateHelper', () {
     test('formatTime HH:mm', () {
       expect(DateHelper.formatTime(DateTime(2026, 1, 1, 9, 5)), '09:05');
