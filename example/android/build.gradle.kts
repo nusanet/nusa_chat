@@ -16,6 +16,15 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    // Plugins (e.g. `jni`) default their own ndkVersion to Flutter's built-in
+    // constant, which differs from :app's pinned version — forcing AGP to
+    // install a second side-by-side NDK. Same override as nusa_selecta.
+    // Must be registered before evaluationDependsOn forces :app to evaluate.
+    afterEvaluate {
+        extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let { android ->
+            android.ndkVersion = "29.0.14206865"
+        }
+    }
     project.evaluationDependsOn(":app")
 }
 
