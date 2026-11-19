@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nusa_chat/src/core/service/media_service.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_strings.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_theme.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/core/util/icons.dart';
 import 'package:nusa_chat/src/core/util/media_helper.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
@@ -13,7 +14,8 @@ import 'package:nusa_chat/src/features/presentation/widgets/widget_svg_icon.dart
 import 'package:video_player/video_player.dart';
 
 /// A video from the chat, full screen. Plays the file on this device; one that
-/// is not here yet is downloaded first, with its progress.
+/// is not here yet is downloaded first, with its progress. On the web, where
+/// there are no files, it streams from its URL.
 class NusaChatVideoViewerPage extends StatefulWidget {
   final ChatMedia media;
   final String caption;
@@ -53,7 +55,9 @@ class _NusaChatVideoViewerPageState extends State<NusaChatVideoViewerPage> {
   Future<void> _load() async {
     final VideoPlayerController controller;
     try {
-      controller = VideoPlayerController.file(File(await _localFile()));
+      controller = NusaChatLocalFile.isWeb
+          ? await _webController()
+          : VideoPlayerController.file(File(await _localFile()));
       await controller.initialize();
     } catch (_) {
       if (!mounted) return;
@@ -68,6 +72,13 @@ class _NusaChatVideoViewerPageState extends State<NusaChatVideoViewerPage> {
     controller.addListener(_onPlayerChanged);
     setState(() => _controller = controller);
     unawaited(controller.play());
+  }
+
+  /// Async like [_localFile], so a missing source fails after `initState`.
+  Future<VideoPlayerController> _webController() async {
+    final source = widget.media.url ?? widget.media.localPath;
+    if (source == null) throw StateError('no source');
+    return VideoPlayerController.networkUrl(Uri.parse(source));
   }
 
   Future<String> _localFile() async {

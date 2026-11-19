@@ -53,6 +53,7 @@ class HomePage extends StatelessWidget {
       visitorId: _visitorId.isEmpty ? null : _visitorId,
       displayName: _displayName,
       pageUrl: 'app://nusa_chat_example/home',
+      clientVersion: '2.1.0', // at least min_client_version, so the bridge answers with Naila
       enableLog: true,
     );
   }

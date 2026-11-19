@@ -17,17 +17,22 @@ class SessionBody extends Equatable {
   @JsonKey(name: 'fcm_token')
   final String? fcmToken;
 
-  const SessionBody({this.pageUrl, this.referrer, this.visitorId, this.displayName, this.fcmToken});
+  /// Dotted version of the host app; the bridge answers with Naila only when
+  /// it is at least the robot's `min_client_version`.
+  @JsonKey(name: 'client_version')
+  final String? clientVersion;
+
+  const SessionBody({this.pageUrl, this.referrer, this.visitorId, this.displayName, this.fcmToken, this.clientVersion});
 
   factory SessionBody.fromJson(Map<String, dynamic> json) => _$SessionBodyFromJson(json);
 
   Map<String, dynamic> toJson() => _$SessionBodyToJson(this);
 
   @override
-  List<Object?> get props => [pageUrl, referrer, visitorId, displayName, fcmToken];
+  List<Object?> get props => [pageUrl, referrer, visitorId, displayName, fcmToken, clientVersion];
 
   @override
   String toString() {
-    return 'SessionBody{pageUrl: $pageUrl, referrer: $referrer, visitorId: $visitorId, displayName: $displayName, fcmToken: $fcmToken}';
+    return 'SessionBody{pageUrl: $pageUrl, referrer: $referrer, visitorId: $visitorId, displayName: $displayName, fcmToken: $fcmToken, clientVersion: $clientVersion}';
   }
 }

@@ -1,3 +1,9 @@
+## 0.6.1
+
+* Brings 0.5.1 (web support) and 0.5.2 (`NusaChatConfig.clientVersion` for Naila) into the 0.6 line, so one version
+  has videos, web and Naila. Videos stay Android and iOS only: on the web the attachment menu has no "Video", and a
+  video from the agent plays in the viewer straight from its URL.
+
 ## 0.6.0
 
 * Videos: "Video" in the attachment menu picks one video from the system photo picker (no permission needed). It is
@@ -22,6 +28,22 @@
 * `NusaChatMediaService` has new methods (`pickVideo`, `videoInfo`, `videoThumbnails`, `compressVideo`,
   `cancelVideoCompression`, `discardVideo`, `downloadVideo`) that a custom implementation must add.
 * Android apps need `minSdk` 24. nusa_chat now has native Android code (`NusaChatPlugin`) that uses Media3 1.9.2.
+
+## 0.5.2
+
+* `NusaChatConfig.clientVersion`: the host app's version, sent as `client_version` when the session starts. The
+  bridge hands the chat to the Naila assistant only from the website's `min_client_version` (`2.0.0` for MyNusa and
+  NusaSelecta). Values that are not dotted digits are not sent.
+
+## 0.5.1
+
+* Web support. The chat, history, photos (gallery and in-app camera), photo crop and drawing, documents, voice
+  notes and location work in the browser. Picked and edited files are kept as blob URLs and uploaded from memory.
+* On the web the browser sends the page's own `Origin` on the REST calls and the WebSocket upgrade, so
+  `NusaChatConfig.origin` is not sent there. The host page's origin must be in the website's `allowed_origins`,
+  and the bridge must allow it for CORS.
+* Voice notes on the web are Opus in WebM (`audio/webm`; Chrome, Firefox) or AAC in MP4 (`audio/mp4`; Safari).
+* The in-app camera no longer closes when the camera has no zoom, torch or focus point (most webcams).
 
 ## 0.5.0
 

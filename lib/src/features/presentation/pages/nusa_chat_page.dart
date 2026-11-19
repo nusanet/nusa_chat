@@ -12,6 +12,7 @@ import 'package:nusa_chat/src/core/theme/nusa_chat_theme.dart';
 import 'package:nusa_chat/src/core/util/date_helper.dart';
 import 'package:nusa_chat/src/core/util/emoji/emoji.dart';
 import 'package:nusa_chat/src/core/util/icons.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/core/util/media_helper.dart';
 import 'package:nusa_chat/src/core/util/styles/spacing.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
@@ -88,9 +89,11 @@ class NusaChatAttachmentOptions {
       maxImages = 0,
       googleMap = null;
 
+  /// [video] is left out on the web: trimming and compressing need the
+  /// device's native encoder.
   List<NusaChatAttachmentKind> get menuKinds => [
     if (gallery) NusaChatAttachmentKind.gallery,
-    if (video) NusaChatAttachmentKind.video,
+    if (video && !NusaChatLocalFile.isWeb) NusaChatAttachmentKind.video,
     if (document) NusaChatAttachmentKind.document,
     if (location) NusaChatAttachmentKind.location,
   ];

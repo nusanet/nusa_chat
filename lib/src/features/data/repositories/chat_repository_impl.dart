@@ -69,6 +69,7 @@ class ChatRepositoryImpl implements ChatRepository {
           visitorId: visitorId,
           displayName: config.displayName,
           fcmToken: config.fcmToken,
+          clientVersion: config.validClientVersion,
         ),
       );
       final session = response.toEntity();

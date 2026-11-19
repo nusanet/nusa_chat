@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:nusa_chat/src/core/error/exception.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/features/data/models/message/send_message_body.dart';
 import 'package:nusa_chat/src/features/data/models/socket/socket_event_model.dart';
 import 'package:web_socket_channel/io.dart';
@@ -13,6 +15,13 @@ typedef WebSocketConnector = WebSocketChannel Function(Uri uri, Map<String, dyna
 WebSocketChannel _ioConnector(Uri uri, Map<String, dynamic> headers) {
   return IOWebSocketChannel.connect(uri, headers: headers, pingInterval: const Duration(seconds: 25));
 }
+
+/// A browser cannot set handshake headers: it sends the page's own `Origin`.
+WebSocketChannel _webConnector(Uri uri, Map<String, dynamic> headers) => WebSocketChannel.connect(uri);
+
+/// The connector for this platform.
+@visibleForTesting
+WebSocketConnector defaultWebSocketConnector() => NusaChatLocalFile.isWeb ? _webConnector : _ioConnector;
 
 /// A frame from [ChatSocketDataSource.connect]: either a server event, or the
 /// open/close of the connection itself.
@@ -41,7 +50,8 @@ class SocketClosedFrame extends SocketFrame {
 ///
 /// A non-browser client must send `Origin` explicitly on the upgrade — the
 /// server validates it manually in `onOpen` and closes with `1008` otherwise
-/// (docs/15-websocket-guide.md § Langkah 2).
+/// (docs/15-websocket-guide.md § Langkah 2). On the web the browser sends the
+/// page's origin instead, so that one must be in `allowed_origins`.
 abstract class ChatSocketDataSource {
   bool get isOpen;
 
@@ -58,7 +68,7 @@ abstract class ChatSocketDataSource {
 class ChatSocketDataSourceImpl implements ChatSocketDataSource {
   final WebSocketConnector connector;
 
-  ChatSocketDataSourceImpl({WebSocketConnector? connector}) : connector = connector ?? _ioConnector;
+  ChatSocketDataSourceImpl({WebSocketConnector? connector}) : connector = connector ?? defaultWebSocketConnector();
 
   WebSocketChannel? _channel;
   bool _isOpen = false;

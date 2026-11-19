@@ -1,11 +1,12 @@
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:cross_file/cross_file.dart';
 import 'package:image/image.dart' as img;
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/core/util/styles/typography.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
@@ -137,7 +138,7 @@ class NusaChatImageEdit {
 
   /// Decodes [path] (EXIF rotation applied), no larger than [maxSide].
   static Future<ui.Image> decode(String path) async {
-    final buffer = await ui.ImmutableBuffer.fromUint8List(await File(path).readAsBytes());
+    final buffer = await ui.ImmutableBuffer.fromUint8List(await NusaChatLocalFile.readAsBytes(path));
     final descriptor = await ui.ImageDescriptor.encoded(buffer);
     final tooBig = math.max(descriptor.width, descriptor.height) > maxSide;
     // One side only, so the aspect ratio is kept.
@@ -190,31 +191,41 @@ class NusaChatImageEdit {
     return image;
   }
 
-  /// Saves [image] as a JPEG next to the app's temporary files and returns it
-  /// as the edited version of [original] (its caption kept).
+  /// Saves [image] as a JPEG next to the app's temporary files (on the web, as
+  /// a blob URL) and returns it as the edited version of [original] (its
+  /// caption kept).
   static Future<ChatAttachment> save(ui.Image image, ChatAttachment original, {Directory? directory}) async {
     final rgba = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
     final width = image.width;
     final height = image.height;
     final pixels = rgba!.buffer.asUint8List();
-    // Encoding a big photo takes a moment; keep it off the UI thread.
-    final jpeg = await Isolate.run(() => _encodeJpeg(pixels, width, height));
+    // Encoding a big photo takes a moment; keep it off the UI thread (the web
+    // has no isolates, so there it runs inline).
+    final jpeg = await compute(_encodeJpegFrame, (pixels, width, height));
 
-    final dir = directory ?? saveDirectory ?? await getTemporaryDirectory();
     final base = original.fileName.contains('.')
         ? original.fileName.substring(0, original.fileName.lastIndexOf('.'))
         : original.fileName;
-    final file = File('${dir.path}/nusa_chat_edit_${DateTime.now().microsecondsSinceEpoch}.jpg');
-    await file.writeAsBytes(jpeg, flush: true);
+    final String path;
+    if (NusaChatLocalFile.isWeb) {
+      path = XFile.fromData(jpeg, mimeType: 'image/jpeg', name: '$base.jpg').path;
+    } else {
+      final dir = directory ?? saveDirectory ?? await getTemporaryDirectory();
+      final file = File('${dir.path}/nusa_chat_edit_${DateTime.now().microsecondsSinceEpoch}.jpg');
+      await file.writeAsBytes(jpeg, flush: true);
+      path = file.path;
+    }
     return ChatAttachment(
       type: ChatMessageType.image,
-      path: file.path,
+      path: path,
       fileName: '$base.jpg',
       mimeType: 'image/jpeg',
       size: jpeg.length,
       caption: original.caption,
     );
   }
+
+  static Uint8List _encodeJpegFrame((Uint8List, int, int) frame) => _encodeJpeg(frame.$1, frame.$2, frame.$3);
 
   static Uint8List _encodeJpeg(Uint8List rgba, int width, int height) {
     final image = img.Image.fromBytes(

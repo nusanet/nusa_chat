@@ -98,16 +98,30 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
 
     try {
       await controller.initialize();
-      _maxZoomLevel = await controller.getMaxZoomLevel();
-      _minZoomLevel = await controller.getMinZoomLevel();
+      // Optional: a web camera usually has no zoom or torch, and the web
+      // plugin does not implement focus at all.
+      await _optional(() async {
+        _maxZoomLevel = await controller.getMaxZoomLevel();
+        _minZoomLevel = await controller.getMinZoomLevel();
+      });
       _zoomLevel.value = _minZoomLevel;
-      await controller.setFlashMode(_selectedFlashMode);
-      await controller.setFocusMode(FocusMode.auto);
+      await _optional(() => controller.setFlashMode(_selectedFlashMode));
+      await _optional(() => controller.setFocusMode(FocusMode.auto));
       if (!mounted) return;
       setState(() => _isCameraInitialized = true);
     } on CameraException catch (error) {
       final denied = error.code.contains('AccessDenied') || error.code.contains('Permission');
       _close(denied ? widget.strings.cameraPermissionDenied : widget.strings.cameraUnavailable);
+    }
+  }
+
+  static Future<void> _optional(Future<void> Function() action) async {
+    try {
+      await action();
+    } on CameraException {
+      // Not supported by this camera.
+    } on UnimplementedError {
+      // Not supported by this platform.
     }
   }
 
@@ -126,11 +140,8 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
   Future<void> _toggleFlash() async {
     final index = _flashModes.indexOf(_selectedFlashMode);
     _selectedFlashMode = _flashModes[(index + 1) % _flashModes.length];
-    try {
-      await _cameraController?.setFlashMode(_selectedFlashMode);
-    } on CameraException {
-      // Front cameras usually have no torch; keep the icon in sync anyway.
-    }
+    // Front cameras usually have no torch; keep the icon in sync anyway.
+    await _optional(() async => _cameraController?.setFlashMode(_selectedFlashMode));
     if (mounted) setState(() {});
   }
 
@@ -140,12 +151,11 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
 
     final point = Offset(details.localPosition.dx / size.width, details.localPosition.dy / size.height);
     setState(() => _focusPoint = details.localPosition);
-    try {
+    // Not every camera supports a focus point.
+    await _optional(() async {
       await controller.setFocusPoint(point);
       await controller.setExposurePoint(point);
-    } on CameraException {
-      // Not every camera supports a focus point.
-    }
+    });
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) setState(() => _focusPoint = null);
     });

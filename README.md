@@ -1,6 +1,6 @@
 # nusa_chat
 
-In-app customer chat ("NusaChat") for Flutter apps on **Android and iOS**, connected to a NusaContact Socket
+In-app customer chat ("NusaChat") for Flutter apps on **Android, iOS and the web**, connected to a NusaContact Socket
 Bridge over REST and WebSocket.
 
 ## Features
@@ -44,6 +44,20 @@ start (the bridge has to store it to push agent replies):
 ```dart
 NusaChatConfig(..., fcmToken: await FirebaseMessaging.instance.getToken())
 ```
+
+### Naila assistant (`client_version`)
+
+The bridge hands a chat to the Naila assistant only when the session is opened with a `client_version` at least
+the `min_client_version` configured for the website (currently `2.0.0` for MyNusa and NusaSelecta). Naila answers
+with a "Hubungi Helpdesk" button; tapping it passes the chat to an agent. Without a version, or with a lower one,
+the visitor gets the old flow: a greeting, then an agent.
+
+```dart
+NusaChatConfig(..., clientVersion: (await PackageInfo.fromPlatform()).version) // e.g. "2.1.0"
+```
+
+Only dotted digits are sent (`2`, `2.1.0`, up to four parts, at most 20 characters); a build suffix such as
+`2.1.0+15` or `2.1.0-beta` is dropped rather than sent, since the bridge would refuse the session.
 
 ### Active session in your own views
 
@@ -116,6 +130,9 @@ Android needs `minSdk` 24 for video compression.
 **iOS** (`Info.plist`): `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`,
 `NSLocationWhenInUseUsageDescription`, and `NSPhotoLibraryUsageDescription` (iOS 13 only).
 
+**Web**: the camera, microphone and location prompts come from the browser, which allows them only on
+`https://` (or `localhost`).
+
 ### Server requirement
 
 `origin` must be registered in `allowed_origins` of the `websites` row for `websiteId` — otherwise the
@@ -123,6 +140,10 @@ session call returns `403` and the socket is closed with `1008`.
 
 Videos also need the bridge to accept `video/mp4` uploads up to 16 MB and `video` messages. Until it does, turn them off
 with `NusaChatAttachmentOptions(video: false)`; otherwise the upload fails and the bubble offers a retry.
+
+On the **web** the browser sends the page's own origin and `origin` is not used, so the origin of the page that
+hosts the app (e.g. `https://app.example.com`) must be in `allowed_origins` instead, and the bridge must answer
+its CORS preflight for the REST calls.
 
 ## Customization
 
@@ -149,7 +170,7 @@ They read colours from `NusaChatThemeScope.of(context)`.
 ## Behaviour
 
 - Bootstrap `POST /v1/widget/{website_id}/sessions` → history `GET …/messages` → WebSocket `/v1/ws` with an explicit
-  `Origin` header.
+  `Origin` header (on the web, the browser's).
 - Sent messages appear immediately (clock icon) and turn to a double check once the server saves them (`ack`). Acks carry no client
   id, so they are matched to pending messages in send order.
 - `rate_limited` / errors mark the message failed — tap to resend.

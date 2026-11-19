@@ -12,6 +12,7 @@ SessionBody _$SessionBodyFromJson(Map<String, dynamic> json) => SessionBody(
   visitorId: json['visitor_id'] as String?,
   displayName: json['display_name'] as String?,
   fcmToken: json['fcm_token'] as String?,
+  clientVersion: json['client_version'] as String?,
 );
 
 Map<String, dynamic> _$SessionBodyToJson(SessionBody instance) => <String, dynamic>{
@@ -20,4 +21,5 @@ Map<String, dynamic> _$SessionBodyToJson(SessionBody instance) => <String, dynam
   'visitor_id': ?instance.visitorId,
   'display_name': ?instance.displayName,
   'fcm_token': ?instance.fcmToken,
+  'client_version': ?instance.clientVersion,
 };

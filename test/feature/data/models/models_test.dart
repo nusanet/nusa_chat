@@ -21,6 +21,14 @@ void main() {
       });
     });
 
+    test('pastikan client_version ikut dikirim kalau ada', () {
+      expect(const SessionBody(visitorId: 'v1', clientVersion: '2.1.0').toJson(), {
+        'visitor_id': 'v1',
+        'client_version': '2.1.0',
+      });
+      expect(SessionBody.fromJson(const {'client_version': '2.1.0'}), const SessionBody(clientVersion: '2.1.0'));
+    });
+
     test('pastikan fcm_token ikut dikirim kalau ada', () {
       expect(const SessionBody(visitorId: 'v1', fcmToken: 'fcm-1').toJson(), {
         'visitor_id': 'v1',

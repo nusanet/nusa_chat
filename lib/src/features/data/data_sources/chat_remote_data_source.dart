@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:nusa_chat/src/config/nusa_chat_config.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/features/data/models/conversation/list_conversation_response.dart';
 import 'package:nusa_chat/src/features/data/models/media/upload_media_response.dart';
 import 'package:nusa_chat/src/features/data/models/message/list_message_response.dart';
@@ -126,7 +127,14 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     final uploadPath = '$_widgetPath/media';
     final formData = FormData.fromMap({
       // The bridge decides the message type from this part's Content-Type.
-      'file': await MultipartFile.fromFile(path, filename: fileName, contentType: DioMediaType.parse(mimeType)),
+      'file': NusaChatLocalFile.isWeb
+          // A blob URL: dio cannot stream it from disk, so send its bytes.
+          ? MultipartFile.fromBytes(
+              await NusaChatLocalFile.readAsBytes(path),
+              filename: fileName,
+              contentType: DioMediaType.parse(mimeType),
+            )
+          : await MultipartFile.fromFile(path, filename: fileName, contentType: DioMediaType.parse(mimeType)),
     });
     final response = await dio.post(
       uploadPath,

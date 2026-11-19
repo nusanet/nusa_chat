@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nusa_chat/nusa_chat.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 import '../../../helper/fake_video_player.dart';
@@ -342,6 +343,47 @@ void main() {
     testWidgets('pastikan media tanpa sumber menutup halaman', (tester) async {
       await open<void>(tester, NusaChatVideoViewerPage(media: const ChatMedia(), mediaService: service));
       expect(find.byType(NusaChatVideoViewerPage), findsNothing);
+    });
+
+    group('di web', () {
+      setUp(() => NusaChatLocalFile.debugIsWeb = true);
+      tearDown(() => NusaChatLocalFile.debugIsWeb = null);
+
+      testWidgets('pastikan video diputar langsung dari URL tanpa unduhan', (tester) async {
+        await open<void>(
+          tester,
+          NusaChatVideoViewerPage(
+            media: const ChatMedia(url: 'https://x/media/abc'),
+            mediaService: service,
+          ),
+        );
+        expect(service.downloaded, isNull);
+        expect(player.created.single.uri, 'https://x/media/abc');
+      });
+
+      testWidgets('pastikan video yang baru dikirim diputar dari blob URL-nya', (tester) async {
+        await open<void>(
+          tester,
+          NusaChatVideoViewerPage(
+            media: const ChatMedia(localPath: 'blob:https://app/1'),
+            mediaService: service,
+          ),
+        );
+        expect(player.created.single.uri, 'blob:https://app/1');
+      });
+
+      testWidgets('pastikan media tanpa sumber menutup halaman', (tester) async {
+        await open<void>(tester, NusaChatVideoViewerPage(media: const ChatMedia(), mediaService: service));
+        expect(find.byType(NusaChatVideoViewerPage), findsNothing);
+      });
+
+      test('pastikan menu lampiran tanpa video', () {
+        expect(const NusaChatAttachmentOptions().menuKinds, isNot(contains(NusaChatAttachmentKind.video)));
+      });
+    });
+
+    test('pastikan menu lampiran punya video di perangkat', () {
+      expect(const NusaChatAttachmentOptions().menuKinds, contains(NusaChatAttachmentKind.video));
     });
 
     testWidgets('pastikan tombol tutup kembali', (tester) async {
