@@ -3,6 +3,14 @@
 * Brings 0.5.1 (web support) and 0.5.2 (`NusaChatConfig.clientVersion` for Naila) into the 0.6 line, so one version
   has videos, web and Naila. Videos stay Android and iOS only: on the web the attachment menu has no "Video", and a
   video from the agent plays in the viewer straight from its URL.
+* Slash commands: typing `/` in the composer lists the website's commands (`GET /v1/widget/{website_id}/commands`)
+  above it, each with its description, narrowed down as the visitor types. Tapping one puts it in the composer for
+  the visitor to send. Past `NusaChatTheme.commandMaxHeight` the list scrolls, with a scrollbar and a fade at the
+  bottom while more commands are below. The list is loaded once when the chat starts; when the request fails or
+  returns no commands, nothing is shown. Turn it off with `NusaChatPage(commands: false)`.
+* Styling: `NusaChatTheme.commandColor`, `commandBorderColor`, `commandTextStyle`, `commandDescriptionStyle` (all
+  optional, following the composer when null) and `commandMaxHeight`; or replace the list with
+  `NusaChatPage.commandSuggestionsBuilder`. New: `ChatCommand`, `NusaChatCommandSuggestions`.
 
 ## 0.6.0
 

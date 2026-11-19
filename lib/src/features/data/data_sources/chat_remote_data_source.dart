@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:nusa_chat/src/config/nusa_chat_config.dart';
 import 'package:nusa_chat/src/core/util/local_file.dart';
+import 'package:nusa_chat/src/features/data/models/command/list_command_response.dart';
 import 'package:nusa_chat/src/features/data/models/conversation/list_conversation_response.dart';
 import 'package:nusa_chat/src/features/data/models/media/upload_media_response.dart';
 import 'package:nusa_chat/src/features/data/models/message/list_message_response.dart';
@@ -26,6 +27,9 @@ abstract class ChatRemoteDataSource {
     required int page,
     required int limit,
   });
+
+  /// The slash commands the website's robot answers.
+  Future<ListCommandResponse> getCommands();
 
   /// HTTP fallback for when the WebSocket is not open — same body as over WS.
   Future<SendMessageResponse> sendMessage(String conversationId, SendMessageBody body);
@@ -56,6 +60,20 @@ class ChatRemoteDataSourceImpl implements ChatRemoteDataSource {
     final response = await dio.post(path, data: body.toJson());
     if (response.statusCode == 200) {
       return SessionResponse.fromJson(response.data);
+    } else {
+      throw DioException(
+        requestOptions: RequestOptions(path: path),
+        response: response,
+      );
+    }
+  }
+
+  @override
+  Future<ListCommandResponse> getCommands() async {
+    final path = '$_widgetPath/commands';
+    final response = await dio.get(path);
+    if (response.statusCode == 200) {
+      return ListCommandResponse.fromJson(response.data);
     } else {
       throw DioException(
         requestOptions: RequestOptions(path: path),

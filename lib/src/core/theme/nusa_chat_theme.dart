@@ -60,6 +60,22 @@ class NusaChatTheme {
   final TextStyle inputHintStyle;
   final Color cursorColor;
 
+  // ---- slash command suggestions ----
+  /// Background of the list above the composer; [composerColor] when null.
+  final Color? commandColor;
+
+  /// Line along the top of the list; [inputBorderColor] when null.
+  final Color? commandBorderColor;
+
+  /// The command, e.g. `/status`; [inputTextStyle] in [primaryColor], semibold, when null.
+  final TextStyle? commandTextStyle;
+
+  /// The command's description; [inputHintStyle] when null.
+  final TextStyle? commandDescriptionStyle;
+
+  /// Height past which the list scrolls.
+  final double commandMaxHeight;
+
   // ---- send button ----
   final Gradient sendButtonGradient;
   final Color sendIconColor;
@@ -190,6 +206,11 @@ class NusaChatTheme {
     required this.snackBarRadius,
     required this.snackBarDuration,
     this.snackBarMargin,
+    this.commandColor,
+    this.commandBorderColor,
+    this.commandTextStyle,
+    this.commandDescriptionStyle,
+    this.commandMaxHeight = 240,
   });
 
   /// The default look.
@@ -342,6 +363,11 @@ class NusaChatTheme {
     double? snackBarRadius,
     Duration? snackBarDuration,
     EdgeInsetsGeometry? snackBarMargin,
+    Color? commandColor,
+    Color? commandBorderColor,
+    TextStyle? commandTextStyle,
+    TextStyle? commandDescriptionStyle,
+    double? commandMaxHeight,
   }) {
     return NusaChatTheme(
       backgroundColor: backgroundColor ?? this.backgroundColor,
@@ -402,6 +428,11 @@ class NusaChatTheme {
       snackBarRadius: snackBarRadius ?? this.snackBarRadius,
       snackBarDuration: snackBarDuration ?? this.snackBarDuration,
       snackBarMargin: snackBarMargin ?? this.snackBarMargin,
+      commandColor: commandColor ?? this.commandColor,
+      commandBorderColor: commandBorderColor ?? this.commandBorderColor,
+      commandTextStyle: commandTextStyle ?? this.commandTextStyle,
+      commandDescriptionStyle: commandDescriptionStyle ?? this.commandDescriptionStyle,
+      commandMaxHeight: commandMaxHeight ?? this.commandMaxHeight,
     );
   }
 }

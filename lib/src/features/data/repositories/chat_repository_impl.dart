@@ -11,6 +11,7 @@ import 'package:nusa_chat/src/features/data/models/data_api_failure/data_api_fai
 import 'package:nusa_chat/src/features/data/models/message/send_message_body.dart';
 import 'package:nusa_chat/src/features/data/models/session/session_body.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
+import 'package:nusa_chat/src/features/domain/entities/chat_command.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_conversation.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_session.dart';
@@ -156,6 +157,21 @@ class ChatRepositoryImpl implements ChatRepository {
         page: page,
         limit: limit,
       );
+      return Right(response.toEntity());
+    } on DioException catch (error) {
+      return Left(_serverFailure(error));
+    } catch (error) {
+      return Left(ParsingFailure(error.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<ChatCommand>>> getCommands() async {
+    final isConnected = await networkInfo.isConnected;
+    if (!isConnected) return Left(ConnectionFailure());
+
+    try {
+      final response = await remoteDataSource.getCommands();
       return Right(response.toEntity());
     } on DioException catch (error) {
       return Left(_serverFailure(error));

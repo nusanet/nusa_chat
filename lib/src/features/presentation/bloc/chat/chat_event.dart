@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
+import 'package:nusa_chat/src/features/domain/entities/chat_command.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
 
@@ -13,6 +14,21 @@ abstract class ChatEvent extends Equatable {
 /// Bootstrap the session, load history and connect.
 class ChatStarted extends ChatEvent {
   const ChatStarted();
+}
+
+/// The slash commands arrived (internal, from [ChatStarted]).
+class ChatCommandsReceived extends ChatEvent {
+  final List<ChatCommand> commands;
+
+  const ChatCommandsReceived({required this.commands});
+
+  @override
+  List<Object?> get props => [commands];
+
+  @override
+  String toString() {
+    return 'ChatCommandsReceived{commands: $commands}';
+  }
 }
 
 class ChatTextSubmitted extends ChatEvent {

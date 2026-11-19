@@ -12,6 +12,7 @@ import 'package:nusa_chat/src/features/domain/entities/chat_session.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_socket_event.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/connect_chat_socket/connect_chat_socket.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/disconnect_chat_socket/disconnect_chat_socket.dart';
+import 'package:nusa_chat/src/features/domain/use_cases/get_chat_commands/get_chat_commands.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/get_chat_history/get_chat_history.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_button_reply/send_chat_button_reply.dart';
 import 'package:nusa_chat/src/features/domain/use_cases/send_chat_location/send_chat_location.dart';
@@ -33,6 +34,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final SendChatButtonReply sendChatButtonReply;
   final DisconnectChatSocket disconnectChatSocket;
 
+  /// Loads the slash commands to suggest; null suggests none.
+  final GetChatCommands? getChatCommands;
+
   /// Delay before reconnect attempt `n` (0-based). Exponential, 1s → 30s.
   final Duration Function(int attempt) reconnectDelay;
 
@@ -45,10 +49,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required this.sendChatLocation,
     required this.sendChatButtonReply,
     required this.disconnectChatSocket,
+    this.getChatCommands,
     Duration Function(int attempt)? reconnectDelay,
   }) : reconnectDelay = reconnectDelay ?? _defaultReconnectDelay,
        super(const ChatState()) {
     on<ChatStarted>(_onChatStarted);
+    on<ChatCommandsReceived>((event, emit) => emit(state.copyWith(commands: event.commands)));
     on<ChatTextSubmitted>(_onChatTextSubmitted);
     on<ChatAttachmentsSubmitted>(_onChatAttachmentsSubmitted);
     on<ChatMessagesSubmitted>(_onChatMessagesSubmitted);
@@ -72,6 +78,10 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   bool _paused = false;
   int _localSequence = 0;
 
+  /// The commands are loading or loaded; a failed load is tried again on the
+  /// next [ChatStarted].
+  bool _commandsRequested = false;
+
   /// Local ids of messages sent over the socket and not yet acked, oldest
   /// first. Acks carry no client id, so they answer these in order — an
   /// upload still in progress is pending too, but must not take an ack.
@@ -80,6 +90,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
 
   FutureOr<void> _onChatStarted(ChatStarted event, Emitter<ChatState> emit) async {
     emit(state.copyWith(status: ChatViewStatus.loading));
+    _loadCommands();
 
     final sessionResult = await startChatSession(NoParams());
     final session = sessionResult.fold((failure) => null, (session) => session);
@@ -100,6 +111,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final history = historyResult.getOrElse(() => const []);
     emit(state.copyWith(status: ChatViewStatus.loaded, messages: _merge(state.messages, history)));
     _connect(emit);
+  }
+
+  /// Alongside the session, without holding it up: the chat works without
+  /// suggestions.
+  void _loadCommands() {
+    final load = getChatCommands;
+    if (load == null || _commandsRequested) return;
+    _commandsRequested = true;
+    load(NoParams()).then((result) {
+      result.fold((_) => _commandsRequested = false, (commands) {
+        if (!isClosed) add(ChatCommandsReceived(commands: commands));
+      });
+    });
   }
 
   void _connect(Emitter<ChatState> emit) {

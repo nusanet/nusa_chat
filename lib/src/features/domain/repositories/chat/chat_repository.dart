@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:nusa_chat/src/core/error/failure.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_attachment.dart';
+import 'package:nusa_chat/src/features/domain/entities/chat_command.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_conversation.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_message.dart';
 import 'package:nusa_chat/src/features/domain/entities/chat_session.dart';
@@ -28,6 +29,9 @@ abstract class ChatRepository {
     required int page,
     required int limit,
   });
+
+  /// The slash commands the website's robot answers (`GET .../commands`).
+  Future<Either<Failure, List<ChatCommand>>> getCommands();
 
   /// Opens the real-time connection. Ends with [ChatSocketClosed].
   Stream<ChatSocketEvent> connect(ChatSession session);

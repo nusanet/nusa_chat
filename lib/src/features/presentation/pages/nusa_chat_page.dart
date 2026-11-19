@@ -23,6 +23,8 @@ import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_image_viewer
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_media_preview_page.dart';
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_video_trim_page.dart';
 import 'package:nusa_chat/src/features/presentation/pages/nusa_chat_video_viewer_page.dart';
+import 'package:nusa_chat/src/features/domain/entities/chat_command.dart';
+import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_command_suggestions.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_app_bar.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_attachment_menu.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_chat_avatar.dart';
@@ -159,6 +161,11 @@ typedef NusaChatAppBarBuilder = PreferredSizeWidget Function(BuildContext contex
 typedef NusaChatMessageBuilder = Widget Function(BuildContext context, NusaChatMessageData data, Widget defaultWidget);
 typedef NusaChatBubbleBuilder = Widget Function(BuildContext context, NusaChatMessageData data);
 typedef NusaChatInputBarBuilder = Widget Function(BuildContext context, NusaChatComposer composer);
+
+/// Replaces [NusaChatCommandSuggestions]: [commands] match what is typed and
+/// are never empty; [onSelected] puts one in the composer.
+typedef NusaChatCommandSuggestionsBuilder =
+    Widget Function(BuildContext context, List<ChatCommand> commands, ValueChanged<ChatCommand> onSelected);
 typedef NusaChatSendButtonBuilder = Widget Function(BuildContext context, VoidCallback? onSend);
 typedef NusaChatErrorBuilder = Widget Function(BuildContext context, String message, VoidCallback retry);
 typedef NusaChatConnectionBuilder = Widget Function(BuildContext context, ChatConnectionStatus connection);
@@ -220,6 +227,14 @@ class NusaChatPage extends StatefulWidget {
   /// Shows the emoji button and its panel.
   final bool emoji;
 
+  /// Suggests the website's slash commands (`GET .../commands`) above the
+  /// composer while the visitor types `/`; tapping one puts it in the
+  /// composer for the visitor to send.
+  final bool commands;
+
+  /// Replaces the default [NusaChatCommandSuggestions].
+  final NusaChatCommandSuggestionsBuilder? commandSuggestionsBuilder;
+
   /// Keeps "Sering Digunakan" across chats; shared preferences by default.
   final NusaChatEmojiStore? emojiStore;
 
@@ -272,6 +287,8 @@ class NusaChatPage extends StatefulWidget {
     this.attachments = const NusaChatAttachmentOptions(),
     this.mediaService,
     this.emoji = true,
+    this.commands = true,
+    this.commandSuggestionsBuilder,
     this.emojiStore,
     this.onNotice,
     this.initialMessage,
@@ -489,6 +506,36 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
 
   static String _joinTexts(List<String> texts) {
     return texts.map((text) => text.trim()).where((text) => text.isNotEmpty).join('\n');
+  }
+
+  /// The commands matching the composer's text: one word starting with `/`.
+  Widget _buildCommandSuggestions() {
+    return BlocSelector<ChatBloc, ChatState, List<ChatCommand>>(
+      bloc: _bloc,
+      selector: (state) => state.commands,
+      builder: (context, commands) => ListenableBuilder(
+        listenable: Listenable.merge([_controller, _recordingElapsed]),
+        builder: (context, _) {
+          final text = _controller.text;
+          final typing = _recordingElapsed.value == null && !text.contains(RegExp(r'\s'));
+          final matches = typing ? commands.where((command) => command.matches(text)).toList() : const <ChatCommand>[];
+          if (matches.isEmpty) return const SizedBox.shrink();
+          return widget.commandSuggestionsBuilder?.call(context, matches, _fillCommand) ??
+              NusaChatCommandSuggestions(commands: matches, onSelected: _fillCommand);
+        },
+      ),
+    );
+  }
+
+  /// Puts [command] in the composer, followed by a space (which closes the
+  /// list), for the visitor to send.
+  void _fillCommand(ChatCommand command) {
+    final text = '${command.command} ';
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    if (!_focusNode.hasFocus && !_emojiPanelOpen.value) _focusNode.requestFocus();
   }
 
   void _send() {
@@ -839,6 +886,7 @@ class _NusaChatPageState extends State<NusaChatPage> with WidgetsBindingObserver
                           child: _buildBody(),
                         ),
                       ),
+                      if (widget.commands) _buildCommandSuggestions(),
                       // The keyboard area below takes the bottom inset.
                       MediaQuery.removeViewPadding(
                         context: context,

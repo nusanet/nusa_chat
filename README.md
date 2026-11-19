@@ -59,6 +59,36 @@ NusaChatConfig(..., clientVersion: (await PackageInfo.fromPlatform()).version) /
 Only dotted digits are sent (`2`, `2.1.0`, up to four parts, at most 20 characters); a build suffix such as
 `2.1.0+15` or `2.1.0-beta` is dropped rather than sent, since the bridge would refuse the session.
 
+### Slash commands
+
+When the visitor types `/`, the chat lists the website's commands from the bridge (`GET .../commands`) above the
+composer, narrowed down as they type; tapping one puts it in the composer (e.g. `/status `) for the visitor to send.
+When the request fails or returns no commands, nothing is shown. Turn it off with `NusaChatPage(..., commands: false)`.
+
+Restyle it through the theme (every field is optional; null follows the composer):
+
+```dart
+NusaChatPage(
+  config: config,
+  theme: NusaChatTheme.fallback().copyWith(
+    commandColor: Colors.white,
+    commandBorderColor: Colors.grey.shade300,
+    commandTextStyle: const TextStyle(fontWeight: FontWeight.w700, color: Colors.indigo),
+    commandDescriptionStyle: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+    commandMaxHeight: 200, // scrolls past this, with a scrollbar and a fade at the bottom
+  ),
+)
+```
+
+or replace it entirely:
+
+```dart
+NusaChatPage(
+  config: config,
+  commandSuggestionsBuilder: (context, commands, onSelected) => MyCommandList(commands, onTap: onSelected),
+)
+```
+
 ### Active session in your own views
 
 ```dart
