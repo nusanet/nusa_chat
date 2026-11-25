@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 
-/// Spacing scale. 4px base, copied from nusa_selecta.
+/// Spacing scale. 4px base.
 class BaseSpacing {
   const BaseSpacing._();
 

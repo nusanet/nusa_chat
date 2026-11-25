@@ -346,7 +346,7 @@ class NusaChatLocationContent extends StatelessWidget {
 ///
 /// The key needs the Maps Static API enabled. A key restricted to the app
 /// (Android package + SHA-1, iOS bundle id) only works when [headers] carry
-/// that identity, as nusa_selecta does for Geocoding:
+/// that identity:
 /// `X-Android-Package` + `X-Android-Cert`, or `X-Ios-Bundle-Identifier`.
 class NusaChatGoogleMap {
   final String apiKey;

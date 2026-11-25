@@ -1,8 +1,6 @@
 import 'dart:ui';
 
-/// Primitive colour palette of the NusaSelecta design system
-/// — the subset the chat uses,
-/// copied from nusa_selecta `core/util/styles/colors.dart`.
+/// Primitive colour palette of the design system — the subset the chat uses.
 ///
 /// Widgets should not read these directly — go through [BaseColor] or, for
 /// anything a host app may recolour, through `NusaChatTheme`.

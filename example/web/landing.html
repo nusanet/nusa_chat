@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NusaChat di website Anda</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root { --ink: #0e2440; --muted: #51657e; --line: #d8e2ee; --blue: #1a61b2; --sky: #eaf3fc; --sun: #ffc24b; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: #fff; font: 17px/1.6 "Avenir Next", "Segoe UI", system-ui, sans-serif; }
+    .wrap { width: min(1080px, 100% - 40px); margin-inline: auto; }
+    header { padding: 22px 0; background: var(--sky); }
+    .brand { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+    .hero { background: var(--sky); padding: 56px 0 88px; }
+    .hero .wrap { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: center; }
+    h1 { margin: 0 0 18px; font-size: clamp(38px, 6vw, 64px); line-height: 1.06; letter-spacing: -.035em; text-wrap: balance; }
+    h2 { margin: 0 0 28px; font-size: 30px; line-height: 1.2; letter-spacing: -.02em; }
+    h3 { margin: 0 0 4px; font-size: 18px; }
+    p { margin: 0; color: var(--muted); max-width: 58ch; }
+    button { font: inherit; cursor: pointer; border: 0; }
+    :focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+    .cta { margin-top: 28px; padding: 13px 26px; border-radius: 12px; background: var(--blue); color: #fff; font-weight: 600; }
+    .cta:hover { background: #134d91; }
+    .talk { display: grid; gap: 12px; }
+    .talk span { padding: 13px 18px; border-radius: 20px; max-width: 84%; }
+    .talk .me { justify-self: end; background: var(--blue); color: #fff; border-bottom-right-radius: 5px; }
+    .talk .cs { justify-self: start; background: #fff; border-bottom-left-radius: 5px; }
+    .features { padding: 80px 0; }
+    .features ul { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 56px; list-style: none; margin: 0; padding: 0; }
+    .features li { padding: 22px 0; border-top: 1px solid var(--line); }
+    footer { padding: 28px 0 110px; border-top: 1px solid var(--line); font-size: 15px; }
+
+    #launcher { position: fixed; right: 24px; bottom: 24px; z-index: 11; width: 60px; height: 60px; border-radius: 50%;
+      display: grid; place-items: center; background: var(--blue); color: #fff; box-shadow: 0 8px 24px rgb(14 36 64 / .28); }
+    /* Hidden by visibility, not display: Flutter must keep a non-zero size. */
+    #chat { position: fixed; right: 24px; bottom: 100px; z-index: 10; width: 390px; height: min(680px, 100dvh - 124px);
+      overflow: hidden; border-radius: 18px; background: #fff; box-shadow: 0 16px 56px rgb(14 36 64 / .28);
+      visibility: hidden; opacity: 0; transform: translateY(14px); transition: opacity .18s, transform .18s, visibility .18s; }
+    #chat.open { visibility: visible; opacity: 1; transform: none; }
+    #chat iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    #loading { position: absolute; inset: 0; display: grid; place-items: center; }
+
+    @media (max-width: 760px) {
+      .hero { padding: 28px 0 64px; }
+      .hero .wrap, .features ul { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      #chat { inset: 0; width: 100%; height: 100dvh; border-radius: 0; }
+      #chat.open ~ #launcher { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { #chat { transition: none; } }
+  </style>
+</head>
+<body>
+  <header><div class="wrap brand">NusaChat</div></header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div>
+          <h1>Ada pertanyaan? Langsung chat saja.</h1>
+          <p>Bicara dengan tim kami tanpa meninggalkan halaman ini. Kirim pesan, foto, dokumen, atau lokasi Anda.</p>
+          <button class="cta" type="button" data-open-chat>Mulai chat</button>
+        </div>
+        <div class="talk" aria-hidden="true">
+          <span class="me">Halo, saya mau tanya soal pesanan saya.</span>
+          <span class="cs">Halo! Boleh kirim nomor pesanannya?</span>
+          <span class="me">Ini fotonya ya, sekalian saya lampirkan.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="wrap">
+        <h2>Yang bisa Anda kirim</h2>
+        <ul>
+          <li><h3>Pesan dan emoji</h3><p>Percakapan berjalan langsung, lengkap dengan riwayatnya.</p></li>
+          <li><h3>Foto</h3><p>Potong atau beri coretan sebelum dikirim.</p></li>
+          <li><h3>Dokumen</h3><p>Lampirkan berkas PDF, Word, atau Excel.</p></li>
+          <li><h3>Lokasi dan pesan suara</h3><p>Browser meminta izin Anda lebih dulu.</p></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="wrap">Contoh NusaChat yang ditanam di halaman HTML.</div></footer>
+
+  <div id="chat" role="dialog" aria-label="Chat"><div id="loading">Memuat chat…</div></div>
+  <button id="launcher" type="button" aria-label="Buka chat" aria-controls="chat" aria-expanded="false">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12a8 8 0 0 1-8 8H4l2-3.5A8 8 0 1 1 21 12Z"/>
+    </svg>
+  </button>
+
+  <script>
+    // Address of the Flutter build. On another site use its full URL, e.g. 'https://chat-widget.example.com/'.
+    const chatUrl = new URL('./', location.href);
+
+    const panel = document.getElementById('chat');
+    const launcher = document.getElementById('launcher');
+    let frame;
+
+    function setOpen(open) {
+      // Flutter is loaded on the first open only, so it does not slow the page down.
+      if (open && !frame) {
+        frame = document.createElement('iframe');
+        frame.title = 'NusaChat';
+        frame.allow = 'camera; microphone; geolocation; clipboard-write';
+        frame.src = chatUrl.href;
+        frame.addEventListener('load', () => document.getElementById('loading').remove(), { once: true });
+        panel.append(frame);
+      }
+      panel.classList.toggle('open', open);
+      launcher.setAttribute('aria-expanded', open);
+      launcher.setAttribute('aria-label', open ? 'Tutup chat' : 'Buka chat');
+      if (!open) launcher.focus();
+    }
+
+    launcher.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
+    document.querySelectorAll('[data-open-chat]').forEach((button) => button.addEventListener('click', () => setOpen(true)));
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && panel.classList.contains('open')) setOpen(false);
+    });
+    window.addEventListener('message', (event) => {
+      if (event.origin !== chatUrl.origin || event.source !== frame?.contentWindow) return;
+      if (event.data === 'nusa_chat:close') setOpen(false);
+    });
+  </script>
+</body>
+</html>

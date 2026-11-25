@@ -2,9 +2,8 @@ import 'package:flutter/painting.dart';
 
 import 'package:nusa_chat/src/core/util/styles/colors.dart';
 
-/// Type scale of the design system, copied
-/// from nusa_selecta. Poppins is bundled with this package, so every style
-/// names `package: 'nusa_chat'` — the host app does not need the font.
+/// Type scale of the design system. Poppins is bundled with this package, so every
+/// style names `package: 'nusa_chat'` — the host app does not need the font.
 class BaseTypography {
   const BaseTypography._();
 

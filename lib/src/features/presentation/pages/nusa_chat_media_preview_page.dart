@@ -18,7 +18,7 @@ import 'package:nusa_chat/src/features/presentation/widgets/widget_svg_icon.dart
 typedef NusaChatAttachmentAdder = Future<List<ChatAttachment>> Function(int remaining);
 
 /// The pre-send preview: a
-/// `neutral/900` screen titled "Kirim ke NusaSelecta" with the current item,
+/// `neutral/900` screen titled "Kirim ke Customer Service" with the current item,
 /// a row of thumbnails with add and delete, and a caption field per item.
 /// A photo can be cropped and drawn on first (top-right buttons).
 ///

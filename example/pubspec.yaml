@@ -14,6 +14,9 @@ dependencies:
     path: ../
   url_launcher: ^6.3.3
 
+  # Browser APIs, used by lib/embed.dart to talk to the page hosting the iframe.
+  web: ^1.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,13 +1,14 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_strings.dart';
 import 'package:nusa_chat/src/core/theme/nusa_chat_theme.dart';
 import 'package:nusa_chat/src/core/util/icons.dart';
+import 'package:nusa_chat/src/core/util/local_file.dart';
 import 'package:nusa_chat/src/features/presentation/widgets/widget_svg_icon.dart';
 
 /// The in-app camera, used instead of the OS camera app so the flow stays in
-/// the chat (same approach as nusa_selecta's `CameraPage`). Pops with the
-/// photo's path; the chat then opens its image preview, where the photo can
+/// the chat. Pops with the photo's path; the chat then opens its image preview, where the photo can
 /// be captioned, deleted or joined by more.
 ///
 /// Needs the camera permission: `android.permission.CAMERA` and
@@ -54,13 +55,13 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) return;
-
     if (state == AppLifecycleState.inactive) {
+      if (controller == null || !controller.value.isInitialized) return;
       _cameraController = null;
       setState(() => _isCameraInitialized = false);
       controller.dispose();
-    } else if (state == AppLifecycleState.resumed && _cameras.isNotEmpty) {
+    } else if (state == AppLifecycleState.resumed && controller == null && _cameras.isNotEmpty) {
+      // Released above when the app went inactive.
       _initCamera(_cameras[_selectedCameraIndex]);
     }
   }
@@ -120,6 +121,8 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
       await action();
     } on CameraException {
       // Not supported by this camera.
+    } on PlatformException {
+      // The same, from a CameraController method that does not convert it (e.g. getMaxZoomLevel).
     } on UnimplementedError {
       // Not supported by this platform.
     }
@@ -224,12 +227,16 @@ class _NusaChatCameraPageState extends State<NusaChatCameraPage> with WidgetsBin
 
   /// The full, uncropped sensor frame (letterboxed), so the photo matches the
   /// live preview. `previewSize` is in the sensor's landscape orientation,
-  /// hence the inverted ratio on a portrait screen.
+  /// hence the inverted ratio on a portrait screen; on the web it is the size
+  /// of the video as shown.
   Widget _buildCameraPreview(CameraController controller) {
     final previewSize = controller.value.previewSize;
     final preview = previewSize == null
         ? CameraPreview(controller)
-        : AspectRatio(aspectRatio: previewSize.height / previewSize.width, child: CameraPreview(controller));
+        : AspectRatio(
+            aspectRatio: NusaChatLocalFile.isWeb ? previewSize.aspectRatio : previewSize.flipped.aspectRatio,
+            child: CameraPreview(controller),
+          );
     return Center(
       child: LayoutBuilder(
         builder: (context, constraints) {

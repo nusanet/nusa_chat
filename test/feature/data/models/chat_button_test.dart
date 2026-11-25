@@ -51,7 +51,7 @@ void main() {
         'type': 'message',
         'from': 'agent',
         'message_type': 'interactive',
-        'body': 'Untuk reset password MyNusa, buka menu Profil.',
+        'body': 'Untuk reset password aplikasi, buka menu Profil.',
         'buttons': [tButtonJson],
         'message_id': 'b6a1',
       }).toEntity();
@@ -59,7 +59,7 @@ void main() {
       final message = (event as ChatSocketIncomingMessage).message;
       expect(message.id, 'b6a1');
       expect(message.type, ChatMessageType.interactive);
-      expect(message.text, 'Untuk reset password MyNusa, buka menu Profil.');
+      expect(message.text, 'Untuk reset password aplikasi, buka menu Profil.');
       expect(message.buttons, [tButton]);
       expect(message.isMine, isFalse);
     });

@@ -1,3 +1,13 @@
+## 0.6.2
+
+* Camera: opens on a camera without zoom or torch, such as a webcam (the spinner never ended), comes back after the app
+  or the page was inactive, and on the web its preview keeps the shape of the video.
+* Default texts: `NusaChatStrings.agentName` is now "Customer Service" and `previewTitle` "Kirim ke Customer Service".
+  Set both to show your own name.
+* README: how to embed the chat in any website with an `<iframe>`. The example has the page to start from
+  (`example/lib/embed.dart`, styled and pointed at a website by its URL) and a landing page
+  (`example/web/landing.html`).
+
 ## 0.6.1
 
 * Brings 0.5.1 (web support) and 0.5.2 (`NusaChatConfig.clientVersion` for Naila) into the 0.6 line, so one version
@@ -40,8 +50,8 @@
 ## 0.5.2
 
 * `NusaChatConfig.clientVersion`: the host app's version, sent as `client_version` when the session starts. The
-  bridge hands the chat to the Naila assistant only from the website's `min_client_version` (`2.0.0` for MyNusa and
-  NusaSelecta). Values that are not dotted digits are not sent.
+  bridge hands the chat to the Naila assistant only from the website's `min_client_version`
+  (e.g. `2.0.0`). Values that are not dotted digits are not sent.
 
 ## 0.5.1
 

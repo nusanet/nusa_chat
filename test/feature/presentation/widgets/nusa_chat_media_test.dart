@@ -198,7 +198,7 @@ void main() {
     }
     await tester.pump(const Duration(milliseconds: 500));
     expect(media.discarded, [picked.path]);
-    expect(find.text('Kirim ke NusaSelecta'), findsOneWidget);
+    expect(find.text('Kirim ke Customer Service'), findsOneWidget);
     expect(find.textContaining('1:30 ·'), findsOneWidget);
 
     await tester.tap(find.byType(NusaChatSendButton));
@@ -313,7 +313,7 @@ void main() {
     await tester.tap(find.text('Foto'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Kirim ke NusaSelecta'), findsOneWidget);
+    expect(find.text('Kirim ke Customer Service'), findsOneWidget);
     expect(find.text('Bukti_Pembayaran.pdf'), findsOneWidget);
     expect(find.text('PDF · 245 KB'), findsOneWidget);
 
@@ -321,7 +321,7 @@ void main() {
     await tester.tap(find.byType(NusaChatSendButton));
     await tester.pumpAndSettle();
 
-    expect(find.text('Kirim ke NusaSelecta'), findsNothing);
+    expect(find.text('Kirim ke Customer Service'), findsNothing);
     verify(mockRepository.uploadMedia(tDocument.copyWith(caption: 'Bukti bayar'), onProgress: anyNamed('onProgress')));
     verify(
       mockRepository.sendMedia(
@@ -345,7 +345,7 @@ void main() {
     await tester.tap(find.byTooltip('Hapus'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Kirim ke NusaSelecta'), findsNothing);
+    expect(find.text('Kirim ke Customer Service'), findsNothing);
     verifyNever(mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')));
   });
 
@@ -521,7 +521,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Kirim ke NusaSelecta'), findsOneWidget);
+      expect(find.text('Kirim ke Customer Service'), findsOneWidget);
       verifyNever(mockRepository.uploadMedia(any, onProgress: anyNamed('onProgress')));
 
       // The rejected image's notice covers the send button until it hides.

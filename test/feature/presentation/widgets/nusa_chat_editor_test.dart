@@ -96,7 +96,7 @@ void main() {
     await tester.pump();
     await tapIo(tester, find.text('Simpan'));
 
-    expect(find.text('Kirim ke NusaSelecta'), findsOneWidget);
+    expect(find.text('Kirim ke Customer Service'), findsOneWidget);
     await tester.tap(find.byType(NusaChatSendButton));
     await tester.pumpAndSettle();
 

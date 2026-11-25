@@ -18,8 +18,8 @@ void main() {
   late MockChatLocalDataSource mockLocal;
   late MockNetworkInfo mockNetworkInfo;
 
-  const tConfig = NusaChatConfig(baseUrl: 'https://x', websiteId: 'mynusa', origin: 'o');
-  const tHostConfig = NusaChatConfig(baseUrl: 'https://x', websiteId: 'mynusa', origin: 'o', visitorId: 'host');
+  const tConfig = NusaChatConfig(baseUrl: 'https://x', websiteId: 'web_1', origin: 'o');
+  const tHostConfig = NusaChatConfig(baseUrl: 'https://x', websiteId: 'web_1', origin: 'o', visitorId: 'host');
   final tNotFound = DioException(
     requestOptions: RequestOptions(path: ''),
     response: Response(
@@ -49,7 +49,7 @@ void main() {
     mockLocal = MockChatLocalDataSource();
     mockNetworkInfo = MockNetworkInfo();
     when(mockNetworkInfo.isConnected).thenAnswer((_) async => true);
-    when(mockLocal.getVisitorId('mynusa')).thenAnswer((_) async => 'saved');
+    when(mockLocal.getVisitorId('web_1')).thenAnswer((_) async => 'saved');
   });
 
   group('getVisitorMessages', () {
@@ -95,7 +95,7 @@ void main() {
     });
 
     test('pastikan kosong tanpa request kalau visitor belum dikenal', () async {
-      when(mockLocal.getVisitorId('mynusa')).thenAnswer((_) async => null);
+      when(mockLocal.getVisitorId('web_1')).thenAnswer((_) async => null);
 
       final result = await call(build());
 
@@ -163,7 +163,7 @@ void main() {
     });
 
     test('pastikan kosong tanpa request kalau visitor belum dikenal', () async {
-      when(mockLocal.getVisitorId('mynusa')).thenAnswer((_) async => null);
+      when(mockLocal.getVisitorId('web_1')).thenAnswer((_) async => null);
 
       final result = await call(build());
 
@@ -172,7 +172,7 @@ void main() {
     });
 
     test('pastikan visitor tetap kosong kalau storage lokal gagal dibaca', () async {
-      when(mockLocal.getVisitorId('mynusa')).thenThrow(Exception('storage'));
+      when(mockLocal.getVisitorId('web_1')).thenThrow(Exception('storage'));
 
       expect((await call(build())).isRight(), isTrue);
       verifyZeroInteractions(mockRemote);

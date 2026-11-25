@@ -168,7 +168,7 @@ class NusaChatStrings {
 
   const NusaChatStrings({
     this.title = 'NusaChat',
-    this.agentName = 'NusaSelecta',
+    this.agentName = 'Customer Service',
     this.hintText = 'Tulis pesan...',
     this.connecting = 'Menghubungkan...',
     this.reconnecting = 'Koneksi terputus, menghubungkan ulang...',
@@ -191,7 +191,7 @@ class NusaChatStrings {
     this.attachVideo = 'Video',
     this.attachDocument = 'Dokumen',
     this.attachLocation = 'Lokasi',
-    this.previewTitle = 'Kirim ke NusaSelecta',
+    this.previewTitle = 'Kirim ke Customer Service',
     this.captionHint = 'Tambahkan keterangan...',
     this.recording = 'Merekam...',
     this.cancel = 'Batal',

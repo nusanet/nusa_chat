@@ -9,8 +9,8 @@ import 'history_page.dart';
 /// ```sh
 /// flutter run \
 ///   --dart-define=NUSA_CHAT_BASE_URL=https://chat-nusa.example.com \
-///   --dart-define=NUSA_CHAT_WEBSITE_ID=mynusa \
-///   --dart-define=NUSA_CHAT_ORIGIN=https://nusaselecta.app
+///   --dart-define=NUSA_CHAT_WEBSITE_ID=web_1 \
+///   --dart-define=NUSA_CHAT_ORIGIN=https://app.example.com
 /// ```
 ///
 /// Without them the app talks to the mock bridge (`dart run tool/mock_bridge.dart`)

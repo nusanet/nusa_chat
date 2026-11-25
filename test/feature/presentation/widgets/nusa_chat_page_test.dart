@@ -79,7 +79,7 @@ void main() {
     await pump(tester, NusaChatPage(config: tConfig, bloc: buildBloc(), onReportTap: () => reported = true));
 
     expect(find.text('NusaChat'), findsOneWidget);
-    expect(find.text('NusaSelecta'), findsOneWidget);
+    expect(find.text('Customer Service'), findsOneWidget);
     expect(find.text('Ada lampu merah LOS.'), findsOneWidget);
     expect(find.text('10:10'), findsOneWidget);
     expect(find.text('Tulis pesan...'), findsOneWidget);
@@ -276,7 +276,7 @@ void main() {
     expect(find.widgetWithText(NusaChatDateChip, 'Kemarin'), findsOneWidget);
     expect(find.widgetWithText(NusaChatDateChip, 'Hari ini'), findsOneWidget);
     // A new day starts a new group, so the agent's name shows again.
-    expect(find.text('NusaSelecta'), findsOneWidget);
+    expect(find.text('Customer Service'), findsOneWidget);
   });
 
   testWidgets('pastikan tanggal mengambang tampil saat scroll lalu hilang', (tester) async {

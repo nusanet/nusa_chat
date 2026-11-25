@@ -5,7 +5,7 @@ import 'package:nusa_chat/src/features/presentation/widgets/widget_svg_icon.dart
 
 /// The round icon button of the top bar:
 /// a 30px disc of 80% white with `Shadow/sm` and a 20px brand-blue icon.
-/// Same as nusa_selecta's `WidgetRoundButton`. Use it for custom app bar
+/// Use it for custom app bar
 /// actions so they match the back button.
 class NusaChatIconButton extends StatelessWidget {
   /// A bundled icon path from `BaseIcons`, or null when [icon] is given.

@@ -101,7 +101,7 @@ void main() {
       mockDio = MockDio();
       dataSource = ChatRemoteDataSourceImpl(
         dio: mockDio,
-        config: const NusaChatConfig(baseUrl: 'https://x', websiteId: 'nusa selecta', origin: 'o'),
+        config: const NusaChatConfig(baseUrl: 'https://x', websiteId: 'web 1', origin: 'o'),
       );
     });
 
@@ -115,7 +115,7 @@ void main() {
       final response = await dataSource.getCommands();
 
       expect(response.data!.single.command, '/status');
-      verify(mockDio.get('/v1/widget/nusa%20selecta/commands'));
+      verify(mockDio.get('/v1/widget/web%201/commands'));
     });
 
     test('pastikan DioException kalau status bukan 200', () {

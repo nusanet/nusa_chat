@@ -23,8 +23,8 @@ NusaChat.open(
   page: NusaChatPage(
     config: const NusaChatConfig(
       baseUrl: 'https://chat-nusa.example.com',
-      websiteId: 'mynusa',
-      origin: 'https://nusaselecta.app', // must be in the website's allowed_origins
+      websiteId: 'web_1',
+      origin: 'https://app.example.com',  // must be in the website's allowed_origins
       visitorId: '6281234567890',         // optional: your customer id / normalised phone
       displayName: 'Budi Santoso',        // optional: contact name for the agent
     ),
@@ -48,7 +48,7 @@ NusaChatConfig(..., fcmToken: await FirebaseMessaging.instance.getToken())
 ### Naila assistant (`client_version`)
 
 The bridge hands a chat to the Naila assistant only when the session is opened with a `client_version` at least
-the `min_client_version` configured for the website (currently `2.0.0` for MyNusa and NusaSelecta). Naila answers
+the `min_client_version` configured for the website (e.g. `2.0.0`). Naila answers
 with a "Hubungi Helpdesk" button; tapping it passes the chat to an agent. Without a version, or with a lower one,
 the visitor gets the old flow: a greeting, then an agent.
 
@@ -137,6 +137,84 @@ With `autoSendInitialMessages` they are sent in order once the chat has loaded. 
 composer and the images open in the pre-send preview with their captions, for the visitor to send. Images the
 bridge would reject (type, size) are skipped with a notice: the caption moves to the next image, or is sent (or
 prefilled) on its own when none is left.
+
+### Embed in a website (iframe)
+
+Any website, Flutter or not, can show the chat in an `<iframe>`. The package has no ready-made embed page: build a small
+web app around `NusaChatPage`, starting from the example's
+[`embed.dart`](example/lib/embed.dart) and [`embed_options.dart`](example/lib/embed_options.dart).
+
+**1. Build and host the chat.** Copy both files into the `lib/` of a Flutter web app that depends on `nusa_chat` and
+`web`, then build and host `build/web`, e.g. at `https://chat-widget.example.com`:
+
+```sh
+flutter build web -t lib/embed.dart \
+  --dart-define=NUSA_CHAT_BASE_URL=https://chat-nusa.example.com \
+  --dart-define=NUSA_CHAT_WEBSITE_IDS=web_1,web_2   # ids allowed in ?website=, the first is the default
+```
+
+**2. Add the iframe** to the website. Without `allow` the browser refuses the camera, microphone and location:
+
+```html
+<iframe src="https://chat-widget.example.com/?website=web_1&amp;color=7f3bba&amp;title=Bantuan&amp;close=0"
+  title="Chat" allow="camera; microphone; geolocation; clipboard-write"
+  style="width:390px;height:680px;border:0;border-radius:18px"></iframe>
+```
+
+**3. URL parameters**, all optional; invalid values are ignored:
+
+| Parameter | Changes |
+|---|---|
+| `website` | Website id on the bridge. Only ids in `NUSA_CHAT_WEBSITE_IDS`; without it, or with any other, the first one |
+| `color` | Visitor bubbles, send button and input border, as `rrggbb` |
+| `appbar` | App bar background, as `rrggbb` |
+| `title` | App bar title |
+| `agent` | Agent name |
+| `hint` | Composer placeholder |
+| `close=0` | Hides the X, for an iframe without the script below |
+
+Anyone can edit the URL, so never read `visitorId` or `baseUrl` from it. For any other styling, change `embed.dart`
+(see [Customization](#customization)); the website's CSS only reaches the box around the chat.
+
+**4. Floating button (optional).** Tapping X sends `nusa_chat:close` to the website, which hides the iframe:
+
+```html
+<button id="chat-button" type="button">Chat</button>
+<script>
+  const chatUrl = new URL('https://chat-widget.example.com/?color=7f3bba');
+  let frame;
+
+  document.getElementById('chat-button').addEventListener('click', () => {
+    if (!frame) { // loaded on the first click, so it does not slow the page down
+      frame = document.createElement('iframe');
+      frame.title = 'Chat';
+      frame.allow = 'camera; microphone; geolocation; clipboard-write';
+      frame.style.cssText = 'position:fixed;right:24px;bottom:24px;width:390px;max-width:calc(100% - 48px);' +
+        'height:min(680px, 100vh - 48px);border:0;border-radius:18px;z-index:10';
+      frame.src = chatUrl.href;
+      document.body.append(frame);
+    }
+    frame.style.visibility = 'visible';
+  });
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== chatUrl.origin || event.source !== frame?.contentWindow) return;
+    if (event.data === 'nusa_chat:close') frame.style.visibility = 'hidden'; // not display: none
+  });
+</script>
+```
+
+[`landing.html`](example/web/landing.html) is a complete page, with a panel, animation and mobile layout.
+
+**5. Server setup and limits**
+
+- Add the iframe's origin (`https://chat-widget.example.com`, not the website's) to `allowed_origins` of every website
+  id used, and let the bridge answer its CORS preflight.
+- The bridge cannot tell which site embeds the chat. Limit it with a header on the chat host:
+  `Content-Security-Policy: frame-ancestors https://www.example.com`.
+- Serve both over `https://`, best on the same parent domain (`chat-widget.example.com` in `www.example.com`): on
+  another domain the browser may block or clear the iframe's storage, and a returning visitor starts a new conversation.
+- Videos cannot be sent from the web; videos from the agent play.
 
 ### Platform setup
 
@@ -242,6 +320,17 @@ curl -X POST localhost:4000/agent/<visitor_id> -d '{"text":"Halo dari agent"}'  
 ```
 
 Against a real bridge: `--dart-define=NUSA_CHAT_BASE_URL=… --dart-define=NUSA_CHAT_WEBSITE_ID=… --dart-define=NUSA_CHAT_ORIGIN=…`.
+
+### Embedded in an HTML page
+
+A plain HTML landing page with a chat button (see [Embed in a website](#embed-in-a-website-iframe)):
+
+```sh
+cd example
+dart run tool/mock_bridge.dart                      # in another terminal; allows http://localhost:5173
+flutter build web -t lib/embed.dart
+python3 -m http.server 5173 -d build/web            # open http://localhost:5173/landing.html
+```
 
 ## License
 

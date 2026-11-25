@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 
-/// Effect styles of the design system, copied from nusa_selecta.
+/// Effect styles of the design system.
 class Shadows {
   const Shadows._();
 

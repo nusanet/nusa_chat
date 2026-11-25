@@ -84,6 +84,16 @@ Future<void> _handle(HttpRequest request) async {
   final segments = request.uri.pathSegments;
   stdout.writeln('${request.method} ${request.uri}');
 
+  // CORS, for the example running in a browser.
+  request.response.headers
+    ..set('Access-Control-Allow-Origin', _allowedOrigin)
+    ..set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    ..set('Access-Control-Allow-Headers', request.headers.value('access-control-request-headers') ?? '*');
+  if (request.method == 'OPTIONS') {
+    request.response.statusCode = HttpStatus.noContent;
+    return request.response.close();
+  }
+
   if (segments.length == 2 && segments[0] == 'v1' && segments[1] == 'ws') return _handleSocket(request);
 
   if (request.method == 'POST' && segments.length == 2 && segments[0] == 'agent') {
@@ -223,7 +233,7 @@ void _seedClosedConversation(String visitorId) {
       'visitor_id': visitorId,
       'direction': 'inbound',
       'type': 'text',
-      'body': 'Bagaimana cara reset password MyNusa?',
+      'body': 'Bagaimana cara reset password aplikasi?',
       'media_url': null,
       'status': 'sent',
       'created_at': closedAt.subtract(const Duration(hours: 25)).toIso8601String(),

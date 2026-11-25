@@ -13,7 +13,7 @@ class NusaChatConfig extends Equatable {
   /// The `website_id` registered on the bridge.
   final String websiteId;
 
-  /// Origin header value, e.g. `https://nusaselecta.app`.
+  /// Origin header value, e.g. `https://app.example.com`.
   final String origin;
 
   /// Visitor identity supplied by the host app (e.g. a normalised phone number

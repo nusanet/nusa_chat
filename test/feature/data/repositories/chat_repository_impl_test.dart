@@ -29,7 +29,7 @@ void main() {
 
   const tConfig = NusaChatConfig(
     baseUrl: 'https://chat.example.com/',
-    websiteId: 'mynusa',
+    websiteId: 'web_1',
     origin: 'https://app.example.com',
     displayName: 'Budi',
     pageUrl: 'app://home',
@@ -81,7 +81,7 @@ void main() {
     });
 
     test('pastikan visitor_id tersimpan dipakai ulang dan id baru disimpan', () async {
-      when(mockLocal.getVisitorId('mynusa')).thenAnswer((_) async => 'saved');
+      when(mockLocal.getVisitorId('web_1')).thenAnswer((_) async => 'saved');
       when(mockRemote.createSession(any)).thenAnswer((_) async => tSessionResponse);
 
       final result = await repository.startSession();
@@ -90,13 +90,13 @@ void main() {
       verify(
         mockRemote.createSession(const SessionBody(pageUrl: 'app://home', visitorId: 'saved', displayName: 'Budi')),
       );
-      verify(mockLocal.saveVisitorId('mynusa', 'v1'));
-      verify(mockLocal.saveConversationId('mynusa', 'c1'));
+      verify(mockLocal.saveVisitorId('web_1', 'v1'));
+      verify(mockLocal.saveConversationId('web_1', 'c1'));
     });
 
     test('pastikan visitor_id dari host diprioritaskan', () async {
       repository = build(
-        const NusaChatConfig(baseUrl: 'https://x', websiteId: 'mynusa', origin: 'o', visitorId: '6281234567890'),
+        const NusaChatConfig(baseUrl: 'https://x', websiteId: 'web_1', origin: 'o', visitorId: '6281234567890'),
       );
       when(mockRemote.createSession(any)).thenAnswer((_) async => tSessionResponse);
 
@@ -110,7 +110,7 @@ void main() {
       repository = build(
         const NusaChatConfig(
           baseUrl: 'https://x',
-          websiteId: 'mynusa',
+          websiteId: 'web_1',
           origin: 'o',
           visitorId: 'v1',
           fcmToken: 'fcm-1',
@@ -127,7 +127,7 @@ void main() {
       repository = build(
         const NusaChatConfig(
           baseUrl: 'https://x',
-          websiteId: 'mynusa',
+          websiteId: 'web_1',
           origin: 'o',
           visitorId: 'v1',
           clientVersion: ' 2.1.0 ',
@@ -144,7 +144,7 @@ void main() {
       repository = build(
         const NusaChatConfig(
           baseUrl: 'https://x',
-          websiteId: 'mynusa',
+          websiteId: 'web_1',
           origin: 'o',
           visitorId: 'v1',
           clientVersion: '2.1.0-beta',
@@ -158,7 +158,7 @@ void main() {
     });
 
     test('pastikan visitor_id tersimpan yang ditolak (400) diganti baru', () async {
-      when(mockLocal.getVisitorId('mynusa')).thenAnswer((_) async => 'bad');
+      when(mockLocal.getVisitorId('web_1')).thenAnswer((_) async => 'bad');
       when(
         mockRemote.createSession(argThat(predicate<SessionBody>((b) => b.visitorId == 'bad'))),
       ).thenThrow(dioError(400, 'visitor_id tidak valid'));
@@ -169,7 +169,7 @@ void main() {
       final result = await repository.startSession();
 
       expect(result, const Right(tSession));
-      verify(mockLocal.clear('mynusa'));
+      verify(mockLocal.clear('web_1'));
     });
 
     test('pastikan pesan error server diteruskan', () async {
